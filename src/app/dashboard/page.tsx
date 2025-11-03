@@ -70,13 +70,15 @@ const Stories = () => (
         <CardContent className="p-4">
             <div className="flex space-x-4 overflow-x-auto pb-2">
                 {stories.map(story => (
-                    <div key={story.id} className="flex flex-col items-center space-y-1 flex-shrink-0 cursor-pointer">
-                        <Avatar className="h-16 w-16 border-2 border-pink-500 p-0.5">
-                            <AvatarImage src={story.avatarUrl} alt={story.username} />
-                            <AvatarFallback>{story.username.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs text-muted-foreground">{story.username}</span>
-                    </div>
+                    <Link href="/dashboard/profile" key={story.id}>
+                        <div className="flex flex-col items-center space-y-1 flex-shrink-0 cursor-pointer">
+                            <Avatar className="h-16 w-16 border-2 border-pink-500 p-0.5">
+                                <AvatarImage src={story.avatarUrl} alt={story.username} />
+                                <AvatarFallback>{story.username.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground">{story.username}</span>
+                        </div>
+                    </Link>
                 ))}
             </div>
         </CardContent>
@@ -87,10 +89,12 @@ const CreatePostCard = () => (
     <Card>
         <CardContent className="p-4">
             <div className="flex items-center gap-3">
-                <Avatar>
-                    <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
-                    <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <Link href="/dashboard/profile">
+                    <Avatar>
+                        <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
+                        <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                </Link>
                 <Input placeholder={`何を考えていますか、${userProfile.name}さん？`} className="flex-grow bg-muted border-none" />
             </div>
             <Separator className="my-3" />
@@ -108,12 +112,14 @@ const PostCard = ({ post }: { post: (typeof posts)[0] }) => (
         <CardHeader className="p-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={post.author.avatarUrl} alt={post.author.name} />
-                        <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    <Link href="/dashboard/profile">
+                        <Avatar>
+                            <AvatarImage src={post.author.avatarUrl} alt={post.author.name} />
+                            <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </Link>
                     <div>
-                        <p className="font-bold">{post.author.name}</p>
+                        <Link href="/dashboard/profile"><p className="font-bold hover:underline">{post.author.name}</p></Link>
                         <p className="text-sm text-muted-foreground">@{post.author.username}・{post.timestamp}</p>
                     </div>
                 </div>
@@ -160,12 +166,14 @@ const RightSidebar = () => (
                 {suggestions.map(sug => (
                     <div key={sug.id} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <Avatar>
-                                <AvatarImage src={sug.avatarUrl} alt={sug.name} />
-                                <AvatarFallback>{sug.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <Link href="/dashboard/profile">
+                                <Avatar>
+                                    <AvatarImage src={sug.avatarUrl} alt={sug.name} />
+                                    <AvatarFallback>{sug.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </Link>
                             <div>
-                                <p className="font-semibold">{sug.name}</p>
+                                <Link href="/dashboard/profile"><p className="font-semibold hover:underline">{sug.name}</p></Link>
                                 <p className="text-sm text-muted-foreground">@{sug.username}</p>
                             </div>
                         </div>
