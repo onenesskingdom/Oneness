@@ -23,6 +23,9 @@ export default function Header() {
         </Link>
         <nav className="flex items-center gap-4">
           <Button variant="ghost" asChild className={cn(isTransparent && "hover:bg-white/10")}>
+            <Link href="/exchange">両替</Link>
+          </Button>
+          <Button variant="ghost" asChild className={cn(isTransparent && "hover:bg-white/10")}>
             <Link href="/login">ログイン</Link>
           </Button>
           <Button asChild className={cn(isTransparent ? "bg-white/90 text-black hover:bg-white" : "bg-primary text-primary-foreground")}>
