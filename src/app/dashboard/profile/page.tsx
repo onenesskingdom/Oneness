@@ -1,0 +1,97 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Bookmark, Grid3x3, Settings, UserPlus, Tag } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+
+const userProfile = {
+    name: "愛 平和 (Ai Heiwa)",
+    username: "ai_heiwa",
+    avatarUrl: "https://picsum.photos/seed/user1/200/200",
+    bio: "愛と平和と調和のメタソーシャルプラットフォーム、ワンネスキングダムの市民。貢献とつながりを大切にしています。 #ワンネス #平和 #貢献",
+    posts: 12,
+    followers: 1530,
+    following: 210,
+};
+
+const userPosts = [
+    { id: 1, imageUrl: "https://picsum.photos/seed/up1/500/500", imageHint: "serene landscape" },
+    { id: 2, imageUrl: "https://picsum.photos/seed/up2/500/500", imageHint: "community gathering" },
+    { id: 3, imageUrl: "https://picsum.photos/seed/up3/500/500", imageHint: "abstract art" },
+    { id: 4, imageUrl: "https://picsum.photos/seed/up4/500/500", imageHint: "person meditating" },
+    { id: 5, imageUrl: "https://picsum.photos/seed/up5/500/500", imageHint: "futuristic city" },
+    { id: 6, imageUrl: "https://picsum.photos/seed/up6/500/500", imageHint: "children playing" },
+];
+
+
+export default function ProfilePage() {
+    return (
+        <div className="container mx-auto max-w-4xl py-8">
+            <header className="flex items-center gap-8 md:gap-16 px-4">
+                <Avatar className="w-24 h-24 md:w-36 md:h-36 border-4 border-background ring-2 ring-primary">
+                    <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
+                    <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="space-y-4 flex-grow">
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-2xl font-light">{userProfile.username}</h1>
+                        <div className="flex gap-2">
+                             <Button variant="secondary">フォロー中</Button>
+                             <Button variant="secondary">メッセージ</Button>
+                             <Link href="/dashboard/settings">
+                                <Button variant="ghost" size="icon">
+                                    <Settings className="h-5 w-5" />
+                                </Button>
+                             </Link>
+                        </div>
+                    </div>
+                    <div className="hidden md:flex gap-8">
+                        <p><span className="font-semibold">{userProfile.posts}</span> 投稿</p>
+                        <p><span className="font-semibold">{userProfile.followers}</span> フォロワー</p>
+                        <p><span className="font-semibold">{userProfile.following}</span> フォロー中</p>
+                    </div>
+                     <div>
+                        <h2 className="font-semibold">{userProfile.name}</h2>
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">{userProfile.bio}</p>
+                    </div>
+                </div>
+            </header>
+            
+            <div className="flex justify-around md:hidden border-t mt-4 pt-2 text-sm text-center">
+                <div><p className="font-semibold">{userProfile.posts}</p><p className="text-muted-foreground">投稿</p></div>
+                <div><p className="font-semibold">{userProfile.followers}</p><p className="text-muted-foreground">フォロワー</p></div>
+                <div><p className="font-semibold">{userProfile.following}</p><p className="text-muted-foreground">フォロー中</p></div>
+            </div>
+
+            <main className="mt-8">
+                <Tabs defaultValue="posts" className="w-full">
+                    <TabsList className="w-full justify-center border-t">
+                        <TabsTrigger value="posts" className="gap-2"><Grid3x3 className="w-4 h-4" />投稿</TabsTrigger>
+                        <TabsTrigger value="saved" className="gap-2"><Bookmark className="w-4 h-4" />保存済み</TabsTrigger>
+                        <TabsTrigger value="tagged" className="gap-2"><Tag className="w-4 h-4" />タグ付けされた投稿</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="posts">
+                        <div className="grid grid-cols-3 gap-1 md:gap-4">
+                            {userPosts.map(post => (
+                                <div key={post.id} className="aspect-square relative group cursor-pointer">
+                                    <Image src={post.imageUrl} alt="投稿画像" layout="fill" objectFit="cover" data-ai-hint={post.imageHint} />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-4">
+                                        <span>❤️ {Math.floor(Math.random() * 1000)}</span>
+                                        <span>💬 {Math.floor(Math.random() * 100)}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="saved">
+                        <p className="text-center py-16 text-muted-foreground">保存済みの投稿はここに表示されます。</p>
+                    </TabsContent>
+                    <TabsContent value="tagged">
+                        <p className="text-center py-16 text-muted-foreground">タグ付けされた投稿はここに表示されます。</p>
+                    </TabsContent>
+                </Tabs>
+            </main>
+        </div>
+    );
+}

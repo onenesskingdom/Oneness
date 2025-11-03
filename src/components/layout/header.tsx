@@ -32,13 +32,17 @@ export default function Header() {
           </div>
 
           <nav className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
-              <MessageSquare className="h-6 w-6" />
-              <span className="sr-only">メッセージ</span>
+            <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild>
+              <Link href="/dashboard/notifications">
+                <MessageSquare className="h-6 w-6" />
+                <span className="sr-only">メッセージ</span>
+              </Link>
             </Button>
-            <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
-              <Bell className="h-6 w-6" />
-              <span className="sr-only">お知らせ</span>
+            <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild>
+              <Link href="/dashboard/notifications">
+                <Bell className="h-6 w-6" />
+                <span className="sr-only">お知らせ</span>
+              </Link>
             </Button>
 
             <DropdownMenu>
@@ -60,8 +64,8 @@ export default function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>プロフィール</DropdownMenuItem>
-                <DropdownMenuItem>設定</DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/dashboard/profile">プロフィール</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/dashboard/settings">設定</Link></DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>ログアウト</DropdownMenuItem>
               </DropdownMenuContent>
