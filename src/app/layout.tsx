@@ -23,10 +23,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body className={cn('font-body antialiased min-h-screen flex flex-col')}>
-        <Header />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+      <body className={cn('font-body antialiased')}>
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <main className="flex-grow">{children}</main>
+          {/* The footer is removed from the main layout for dashboard view */}
+        </div>
         <Toaster />
       </body>
     </html>
