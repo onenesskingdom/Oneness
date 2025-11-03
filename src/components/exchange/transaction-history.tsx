@@ -15,10 +15,11 @@ import { cn } from "@/lib/utils";
 
 type Transaction = {
     id: string;
-    request_date: Date;
+    type: 'exchange' | 'purchase' | 'exchange_rejection';
+    date: Date;
     op_amount: number;
-    target_currency: string;
-    payout_amount: number;
+    currency: string;
+    amount: number;
     status: 'pending' | 'approved' | 'processing' | 'completed' | 'rejected';
 }
 
@@ -41,6 +42,12 @@ const statusTextMap = {
     completed: '完了',
     rejected: '却下',
 };
+
+const typeTextMap = {
+    exchange: '換金',
+    purchase: '購入',
+    exchange_rejection: '換金却下',
+}
 
 
 export default function TransactionHistory({ transactions }: TransactionHistoryProps) {
@@ -65,16 +72,18 @@ export default function TransactionHistory({ transactions }: TransactionHistoryP
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>申請日</TableHead>
+                            <TableHead>日付</TableHead>
+                            <TableHead>タイプ</TableHead>
                             <TableHead>ステータス</TableHead>
                             <TableHead className="text-right">OP額</TableHead>
-                            <TableHead className="text-right">受取額</TableHead>
+                            <TableHead className="text-right">金額</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {transactions.map((tx) => (
                             <TableRow key={tx.id}>
-                                <TableCell>{tx.request_date.toLocaleDateString()}</TableCell>
+                                <TableCell>{tx.date.toLocaleDateString()}</TableCell>
+                                <TableCell>{typeTextMap[tx.type]}</TableCell>
                                 <TableCell>
                                      <Badge variant={statusVariantMap[tx.status]} className={cn(
                                          tx.status === 'completed' && 'bg-green-600 text-white',
@@ -83,12 +92,14 @@ export default function TransactionHistory({ transactions }: TransactionHistoryP
                                         {statusTextMap[tx.status]}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="text-right font-medium">{tx.op_amount.toLocaleString()} OP</TableCell>
+                                <TableCell className={cn("text-right font-medium", tx.type === 'purchase' ? 'text-green-600' : 'text-red-600')}>
+                                    {tx.type === 'purchase' ? '+' : '-'}{tx.op_amount.toLocaleString()} OP
+                                </TableCell>
                                 <TableCell className="text-right font-medium">
-                                    {tx.payout_amount.toLocaleString(undefined, {
-                                         minimumFractionDigits: tx.target_currency === 'BTC' ? 8 : 2,
-                                         maximumFractionDigits: tx.target_currency === 'BTC' ? 8 : 2,
-                                    })} {tx.target_currency}
+                                    {tx.amount.toLocaleString(undefined, {
+                                         minimumFractionDigits: tx.currency === 'BTC' ? 8 : (tx.currency === 'JPY' ? 0 : 2),
+                                         maximumFractionDigits: tx.currency === 'BTC' ? 8 : 2,
+                                    })} {tx.currency}
                                 </TableCell>
                             </TableRow>
                         ))}

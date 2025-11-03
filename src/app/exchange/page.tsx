@@ -2,6 +2,9 @@ import ExchangeForm from "@/components/exchange/exchange-form";
 import TransactionHistory from "@/components/exchange/transaction-history";
 import { OnenessKingdomLogo } from "@/lib/icons";
 import Link from "next/link";
+import BuyOpForm from "@/components/exchange/buy-op-form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 export default function ExchangePage() {
 
@@ -18,10 +21,11 @@ export default function ExchangePage() {
     }
 
     const transactions = [
-        { id: 'txn1', request_date: new Date('2024-07-20'), op_amount: 500, target_currency: 'JPY', payout_amount: 750, status: 'completed' },
-        { id: 'txn2', request_date: new Date('2024-08-05'), op_amount: 1000, target_currency: 'USDT', payout_amount: 10, status: 'approved' },
-        { id: 'txn3', request_date: new Date('2024-08-15'), op_amount: 2000, target_currency: 'BTC', payout_amount: 0.0003, status: 'pending' },
-        { id: 'txn4', request_date: new Date('2024-08-18'), op_amount: 300, target_currency: 'JPY', payout_amount: 450, status: 'rejected' },
+        { id: 'txn1', type: 'exchange', date: new Date('2024-07-20'), op_amount: 500, currency: 'JPY', amount: 750, status: 'completed' },
+        { id: 'buy1', type: 'purchase', date: new Date('2024-08-19'), op_amount: 2000, currency: 'JPY', amount: 2000, status: 'completed' },
+        { id: 'txn2', type: 'exchange', date: new Date('2024-08-05'), op_amount: 1000, currency: 'USDT', amount: 10, status: 'approved' },
+        { id: 'txn3', type: 'exchange', date: new Date('2024-08-15'), op_amount: 2000, currency: 'BTC', amount: 0.0003, status: 'pending' },
+        { id: 'txn4', type: 'exchange_rejection', date: new Date('2024-08-18'), op_amount: 300, currency: 'JPY', amount: 450, status: 'rejected' },
     ]
 
     return (
@@ -33,11 +37,22 @@ export default function ExchangePage() {
                     </Link>
                     <h1 className="text-3xl font-bold font-headline">OP通貨交換システム</h1>
                     <p className="text-balance text-muted-foreground">
-                        あなたのOPを外部通貨に交換します。
+                        あなたのOPを外部通貨に交換、またはOPを購入します。
                     </p>
                 </div>
                 
-                <ExchangeForm user={user} exchangeRates={exchangeRates} />
+                <Tabs defaultValue="exchange">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="exchange">OPを換金</TabsTrigger>
+                        <TabsTrigger value="buy">OPを購入</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="exchange">
+                        <ExchangeForm user={user} exchangeRates={exchangeRates} />
+                    </TabsContent>
+                    <TabsContent value="buy">
+                        <BuyOpForm user={user} />
+                    </TabsContent>
+                </Tabs>
                 
                 <TransactionHistory transactions={transactions} />
             </div>
