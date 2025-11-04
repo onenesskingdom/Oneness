@@ -11,10 +11,26 @@ const loginSchema = z.object({
 });
 
 export async function loginAction(values: z.infer<typeof loginSchema>) {
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  // In a real app, you'd validate credentials against a database
-  console.log('Login attempt:', values);
-  return { success: true, message: 'ログインに成功しました！' };
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(values),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, message: data.error || 'ログインに失敗しました' };
+    }
+
+    return { success: true, message: 'ログインに成功しました！', user: data.user };
+  } catch (error) {
+    console.error('Login error:', error);
+    return { success: false, message: 'ログイン中にエラーが発生しました' };
+  }
 }
 
 const registrationSchema = z.object({
@@ -44,13 +60,29 @@ export async function registerAction(values: z.infer<typeof registrationSchema>)
             };
         }
 
-        // In a real app, you would save the user to the database here.
-        console.log('User registered successfully with AI verification:', values.email);
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ...values,
+                aiVerificationResult: aiResult,
+            }),
+        });
 
-        // Send a welcome email
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data.error || '登録に失敗しました',
+                aiResult,
+            };
+        }
+
         await generateWelcomeEmail({ name: values.name });
 
-        // Simulate login and return redirect path
         return {
             success: true,
             message: '登録に成功しました！ワンネスキングダムへようこそ。',
