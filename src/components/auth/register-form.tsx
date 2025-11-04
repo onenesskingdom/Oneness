@@ -241,7 +241,7 @@ export default function RegisterForm() {
                                     name="month"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <Select onValuechange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="月" />
