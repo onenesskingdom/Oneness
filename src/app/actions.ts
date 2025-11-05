@@ -105,6 +105,9 @@ const ageVerificationSchema = z.object({
 
 export async function verifyAgeAction(values: z.infer<typeof ageVerificationSchema>) {
     try {
+        if (!process.env.GOOGLE_GENAI_API_KEY) {
+            return { success: false, message: 'AIキーが未設定のため年齢確認を実行できません。サーバーの環境変数 GOOGLE_GENAI_API_KEY を設定してください。' };
+        }
         const result = await automatedAgeVerification(values);
         return { success: true, data: result };
     } catch (error) {

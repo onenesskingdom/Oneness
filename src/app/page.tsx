@@ -113,7 +113,7 @@ export default function Home() {
       <section className="w-full py-16 md:py-24 bg-gradient-to-br from-amber-50 to-orange-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-headline font-bold mb-4">🪙 ワンネスポイント制度</h2>
+            <h2 className="text-3xl md:text-4xl font-headline font-bold mb-4">🪙 OP制度</h2>
             <p className="text-muted-foreground max-w-3xl mx-auto text-lg">
               愛・平和・調和・貢献を基準に、会員が提供・共有・成長を通してポイント（価値）を循環させる仕組みです。
             </p>
@@ -129,8 +129,8 @@ export default function Home() {
                   <div>
                     <h3 className="font-semibold text-lg mb-2">💱 基本情報</h3>
                     <ul className="space-y-2 text-muted-foreground">
-                      <li>• <strong>通貨名:</strong> ワンネスポイント（WP）</li>
-                      <li>• <strong>換算レート:</strong> 1 WP = 100円</li>
+                      <li>• <strong>通貨名:</strong> OP</li>
+                      <li>• <strong>換算レート:</strong> 1 OP = 100円</li>
                       <li>• <strong>会員登録:</strong> 無料</li>
                       <li>• <strong>最終目標:</strong> 「王様の王様」= 真のワンネス達成者</li>
                     </ul>
@@ -158,10 +158,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <PointItem action="提供登録（AI審査通過）" points="+1 WP" />
-                    <PointItem action="紹介成功" points="+1 WP" />
-                    <PointItem action="会員同士が繋がる" points="+1 WP" />
-                    <PointItem action="寄付を行う" points="+1 WP" />
+                    <PointItem action="提供登録（AI審査通過）" points="+1 OP" />
+                    <PointItem action="紹介成功" points="+1 OP" />
+                    <PointItem action="会員同士が繋がる" points="+1 OP" />
+                    <PointItem action="寄付を行う" points="+1 OP" />
                   </div>
                 </CardContent>
               </Card>
@@ -172,10 +172,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <PointItem action="夫・妻になる" points="+10 WP" />
-                    <PointItem action="夫婦になる" points="+200 WP" variant="highlight" />
-                    <PointItem action="子供になる" points="+10 WP" />
-                    <PointItem action="兄弟・姉妹になる" points="+10 WP" />
+                    <PointItem action="夫・妻になる" points="+10 OP" />
+                    <PointItem action="夫婦になる" points="+200 OP" variant="highlight" />
+                    <PointItem action="子供になる" points="+10 OP" />
+                    <PointItem action="兄弟・姉妹になる" points="+10 OP" />
                   </div>
                 </CardContent>
               </Card>
@@ -186,10 +186,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <PointItem action="コミュニティ世話役" points="+10 WP" />
-                    <PointItem action="コミュニティ参加" points="+10 WP" />
-                    <PointItem action="コミュニティに寄付" points="+10 WP〜" />
-                    <PointItem action="コミュニティ招待" points="+1 WP" />
+                    <PointItem action="コミュニティ世話役" points="+10 OP" />
+                    <PointItem action="コミュニティ参加" points="+10 OP" />
+                    <PointItem action="コミュニティに寄付" points="+10 OP〜" />
+                    <PointItem action="コミュニティ招待" points="+1 OP" />
                   </div>
                 </CardContent>
               </Card>
@@ -200,10 +200,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <PointItem action="教育者になる" points="+200 WP" variant="highlight" />
-                    <PointItem action="生産者になる" points="+200 WP" variant="highlight" />
-                    <PointItem action="仲介役" points="+200 WP" variant="highlight" />
-                    <PointItem action="平和維持セキュリティ役" points="+200 WP" variant="highlight" />
+                    <PointItem action="教育者になる" points="+200 OP" variant="highlight" />
+                    <PointItem action="生産者になる" points="+200 OP" variant="highlight" />
+                    <PointItem action="仲介役" points="+200 OP" variant="highlight" />
+                    <PointItem action="平和維持セキュリティ役" points="+200 OP" variant="highlight" />
                   </div>
                 </CardContent>
               </Card>
@@ -218,13 +218,13 @@ export default function Home() {
                   貢献度と累計ポイントにより称号を自動認定します。各7軸（愛・知恵・公正・力・超能力・治療・審判）に対して3段階の称号があります。
                 </p>
                 <div className="grid md:grid-cols-3 gap-4">
-                  <TitleCard title="賢者" requirement="1,000 WP" description="各軸の賢者として認定" />
-                  <TitleCard title="君" requirement="10,000 WP" description="各軸の君として認定" />
-                  <TitleCard title="王様" requirement="100,000 WP" description="各軸の王様として認定" />
+                  <TitleCard title="賢者" requirement="1,000 OP" description="各軸の賢者として認定" />
+                  <TitleCard title="君" requirement="10,000 OP" description="各軸の君として認定" />
+                  <TitleCard title="王様" requirement="100,000 OP" description="各軸の王様として認定" />
                 </div>
                 <div className="mt-6 p-4 bg-white rounded-lg border-2 border-amber-300">
                   <p className="font-semibold text-center text-lg">
-                    🌟 最高称号: 王様の王様 - 1,000,000 WP 🌟
+                    🌟 最高称号: 王様の王様 - 1,000,000 OP 🌟
                   </p>
                 </div>
               </CardContent>
@@ -236,7 +236,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>• <strong>交換上限:</strong> 月1回、保有WPの最大33％まで</li>
+                  <li>• <strong>交換上限:</strong> 月1回、保有OPの最大33％まで</li>
                   <li>• <strong>対象者:</strong> 7軸いずれかの称号者（賢者以上）</li>
                   <li>• <strong>交換可能通貨:</strong> ビットコイン等（王国指定）</li>
                 </ul>

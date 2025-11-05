@@ -23,6 +23,7 @@ import { cn, fileToDataUri } from "@/lib/utils"
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { AgeVerificationOutput } from "@/ai/flows/automated-age-verification";
+import WebcamCapture from "@/components/auth/webcam-capture";
 
 const formSchema = z.object({
   document: z.instanceof(File).refine(file => file.size > 0, "書類が必要です。"),
@@ -32,6 +33,7 @@ export default function AgeVerifier() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AgeVerificationOutput | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,8 +67,33 @@ export default function AgeVerifier() {
     }
   }
 
+  const handleCapture = async (imageSrc: string | null) => {
+    setCapturedImage(imageSrc);
+    try {
+      if (imageSrc) {
+        const res = await fetch(imageSrc);
+        const blob = await res.blob();
+        const file = new File([blob], 'capture.jpg', { type: blob.type || 'image/jpeg' });
+        form.setValue('document', file, { shouldValidate: true });
+      } else {
+        form.resetField('document');
+      }
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "カメラ画像の処理に失敗しました",
+        description: "もう一度撮影するか、ファイルをアップロードしてください。",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
+        <div className="space-y-2">
+          <FormLabel>身分証明書（カメラで撮影可）</FormLabel>
+          <WebcamCapture onCapture={handleCapture} />
+          <p className="text-xs text-muted-foreground">撮影後は自動的に画像がフォームに設定されます。うまくいかない場合は下のファイルアップロードをご利用ください。</p>
+        </div>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -74,7 +101,7 @@ export default function AgeVerifier() {
                 name="document"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>身分証明書</FormLabel>
+                        <FormLabel>身分証明書（アップロード）</FormLabel>
                         <FormControl>
                             <Input 
                                 type="file" 
@@ -82,7 +109,7 @@ export default function AgeVerifier() {
                                 onChange={(e) => field.onChange(e.target.files?.[0])}
                             />
                         </FormControl>
-                        <FormDescription>身分証明書の鮮明な写真をアップロードしてください。</FormDescription>
+                        <FormDescription>鮮明な写真をアップロードしてください。カメラ撮影済みの場合はアップロード不要です。</FormDescription>
                         <FormMessage />
                     </FormItem>
                 )}
