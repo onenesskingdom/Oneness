@@ -1,59 +1,175 @@
 # Database Setup Instructions
 
-This project uses Netlify DB (powered by Neon) for the user authentication system.
+This project uses Supabase (PostgreSQL) as the primary database and Neo4j for graph relationships. Supabase provides PostgreSQL, Auth, and Realtime capabilities.
 
 ## Prerequisites
 
-1. You must be logged into the Netlify CLI
-2. Your site must be linked to Netlify
+1. Supabase project created (local Docker or hosted)
+2. Supabase CLI installed and authenticated
+3. Neo4j instance (Docker or hosted)
 
 ## Setup Steps
 
-### 1. Link to Netlify (if not already done)
+### 1. Initialize Supabase locally (optional)
 
 ```bash
-netlify link
+supabase init
+supabase start
 ```
 
-### 2. Run Database Migration
-
-The database will be automatically provisioned when you run `netlify dev` or `netlify build` for the first time after installing `@netlify/neon`.
-
-To create the users table, run the migration script:
+### 2. Link to your Supabase project
 
 ```bash
-netlify env:get NETLIFY_DATABASE_URL
-npx tsx netlify/migrate-db.ts
+supabase link --project-ref <PROJECT_REF>
 ```
 
-### 3. Start Development Server
+### 3. Run Database Migrations
+
+Apply the Supabase schema:
 
 ```bash
-netlify dev
+supabase db push
+```
+
+Or run the migration script directly:
+
+```bash
+npx tsx supabase/migrate-db.ts
+```
+
+### 4. Start Development Server
+
+```bash
+npm run dev
 ```
 
 This will:
 - Start the Next.js development server
-- Emulate Netlify Functions locally
-- Provide access to the Netlify DB
+- Connect to Supabase PostgreSQL and Realtime
+- Connect to Neo4j for graph queries
 
-## Database Schema
+## PostgreSQL Schema (Supabase)
 
-The `users` table has the following structure:
-
+### users
 ```sql
 CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
-  dob DATE NOT NULL,
-  photo_data_uri TEXT,
-  document_data_uri TEXT,
+  kyc_status VARCHAR(50) DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+### user_profiles
+```sql
+CREATE TABLE user_profiles (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  display_name VARCHAR(255) NOT NULL,
+  bio TEXT,
+  avatar_url TEXT,
+  rank VARCHAR(50) DEFAULT 'member',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### points_ledger
+```sql
+CREATE TABLE points_ledger (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  interaction_id UUID,
+  amount INT NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### listings
+```sql
+CREATE TABLE listings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  type VARCHAR(20) NOT NULL CHECK (type IN ('offer', 'request')),
+  title TEXT NOT NULL,
+  description TEXT,
+  status VARCHAR(20) DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### interactions
+```sql
+CREATE TABLE interactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id UUID NOT NULL REFERENCES listings(id),
+  provider_user_id UUID NOT NULL REFERENCES users(id),
+  receiver_user_id UUID NOT NULL REFERENCES users(id),
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### evaluations
+```sql
+CREATE TABLE evaluations (
+  id BIGSERIAL PRIMARY KEY,
+  interaction_id UUID NOT NULL REFERENCES interactions(id),
+  evaluator_user_id UUID NOT NULL REFERENCES users(id),
+  target_user_id UUID NOT NULL REFERENCES users(id),
+  rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Realtime Tables
+```sql
+-- Chat messages
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  interaction_id UUID NOT NULL REFERENCES interactions(id),
+  sender_user_id UUID NOT NULL REFERENCES users(id),
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User notifications
+CREATE TABLE user_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  type VARCHAR(50) NOT NULL,
+  message TEXT NOT NULL,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI avatar state
+CREATE TABLE ai_avatar_state (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  state JSONB NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## Neo4j Graph Model
+
+### Node Labels
+- `:User`
+- `:Community`
+- `:Skill`
+- `:Listing`
+
+### Relationship Types
+- `[:FOLLOWS]->`
+- `[:RELATED_TO]->`
+- `[:TRUSTS]->` (with weight property)
+- `[:CONTRIBUTED_TO]->`
 
 ## API Endpoints
 
@@ -63,12 +179,9 @@ CREATE TABLE users (
 - **Body**:
   ```json
   {
-    "name": "string",
     "email": "string",
     "password": "string",
-    "dob": "ISO date string",
-    "photoDataUri": "string (optional)",
-    "documentDataUri": "string (optional)"
+    "displayName": "string"
   }
   ```
 
@@ -83,14 +196,25 @@ CREATE TABLE users (
   }
   ```
 
+## Realtime Features
+
+- **Chat**: Enable Realtime on the `messages` table.
+- **Notifications**: Enable Realtime on `user_notifications` table.
+- **AI Avatar**: Enable Realtime on `ai_avatar_state` table or use Supabase Broadcast for high-frequency events.
+
 ## Security Notes
 
-- Passwords are hashed using SHA-256 before storage
-- Email addresses are unique and indexed
+- Passwords are hashed before storage.
+- Email addresses are unique and indexed.
+- Row Level Security (RLS) should be enabled on user-specific tables.
 
-## Claiming Your Database
+## Environment Variables
 
-The database is initially created as anonymous. To claim it and manage it through the Netlify UI:
-1. Go to your site in the Netlify dashboard
-2. Navigate to the Database section
-3. Follow the prompts to claim your database
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_neo4j_password
+```

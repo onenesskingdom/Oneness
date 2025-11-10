@@ -5,7 +5,10 @@
 - Landing Page: A visually appealing landing page to introduce the Oneness Kingdom program.
 - User Registration: Allow new users to register an account.
 - User Login: Enable existing users to log in securely to access the platform.
-- Netlify Database Integration: Set up and connect to a Netlify database for user data storage.
+- Supabase Integration: PostgreSQL for transactional data, Auth, and Realtime.
+- Neo4j Graph: Social relationships and Trust graph queries.
+- Realtime Features: Chat, notifications, AI avatar state via Supabase Realtime.
+- Marketplace: Listings, interactions, evaluations, and points ledger.
 
 ## Style Guidelines:
 

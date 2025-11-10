@@ -17,16 +17,16 @@ import {
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
-import { loginAction } from "@/app/actions";
 import { LoadingSpinner } from "@/lib/icons";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const formSchema = z.object({
   email: z.string().email({
-    message: "有効なメールアドレスを入力してください。",
+    message: "Please enter a valid email address.",
   }),
   password: z.string().min(1, {
-    message: "パスワードは必須です。",
+    message: "Password is required.",
   }),
 })
 
@@ -45,23 +45,43 @@ export default function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await loginAction(values);
-    setIsLoading(false);
 
-    if (result.success) {
-      toast({
-        title: "ログイン成功",
-        description: result.message,
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
       });
-      // In a real app, a token would be stored, not just a flag.
-      localStorage.setItem('isLoggedIn', 'true');
-      router.push('/dashboard');
-    } else {
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Login successful",
+          description: data.message,
+        });
+        // Store session in localStorage (or use context/state management)
+        localStorage.setItem('auth_token', data.session.access_token);
+        localStorage.setItem('refresh_token', data.session.refresh_token);
+        localStorage.setItem('user', JSON.stringify(data.session.user));
+        router.push('/dashboard');
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: data.error || 'Invalid credentials',
+        });
+      }
+    } catch (error) {
       toast({
         variant: "destructive",
-        title: "ログイン失敗",
-        description: result.message,
+        title: "Error",
+        description: "An unexpected error occurred during login.",
       });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -73,7 +93,7 @@ export default function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>メールアドレス</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input placeholder="citizen@oneness.kingdom" {...field} />
               </FormControl>
@@ -86,7 +106,7 @@ export default function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>パスワード</FormLabel>
+              <FormLabel>Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -94,8 +114,13 @@ export default function LoginForm() {
             </FormItem>
           )}
         />
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
+            Forgot password?
+          </Link>
+        </div>
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? <LoadingSpinner /> : 'ログイン'}
+          {isLoading ? <LoadingSpinner /> : 'Sign In'}
         </Button>
       </form>
     </Form>
