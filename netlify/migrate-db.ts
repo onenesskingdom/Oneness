@@ -14,7 +14,6 @@ async function migrate() {
       dob DATE NOT NULL,
       photo_data_uri TEXT,
       document_data_uri TEXT,
-      ai_verification_result JSONB,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )

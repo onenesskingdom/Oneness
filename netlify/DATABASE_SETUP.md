@@ -50,7 +50,6 @@ CREATE TABLE users (
   dob DATE NOT NULL,
   photo_data_uri TEXT,
   document_data_uri TEXT,
-  ai_verification_result JSONB,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -69,8 +68,7 @@ CREATE TABLE users (
     "password": "string",
     "dob": "ISO date string",
     "photoDataUri": "string (optional)",
-    "documentDataUri": "string (optional)",
-    "aiVerificationResult": "object (optional)"
+    "documentDataUri": "string (optional)"
   }
   ```
 
@@ -89,7 +87,6 @@ CREATE TABLE users (
 
 - Passwords are hashed using SHA-256 before storage
 - Email addresses are unique and indexed
-- AI verification results are stored as JSONB for flexible querying
 
 ## Claiming Your Database
 

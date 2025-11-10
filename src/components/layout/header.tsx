@@ -115,10 +115,7 @@ export default function Header() {
           <Button asChild className={cn(isTransparent ? "bg-white/90 text-black hover:bg-white" : "bg-primary text-primary-foreground")}>
             <Link href="/register">登録</Link>
           </Button>
-          <Button variant="outline" asChild className={cn(isTransparent && "border-white/80 text-white hover:bg-white/10")}>
-            <Link href="/verify-age">年齢確認</Link>
-          </Button>
-        </nav>
+          </nav>
       </div>
     </header>
   );

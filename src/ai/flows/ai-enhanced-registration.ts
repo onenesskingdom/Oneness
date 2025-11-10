@@ -3,7 +3,7 @@
 /**
  * @fileOverview This file defines the AI-enhanced registration flow for the Oneness Kingdom platform.
  *
- * It includes functions and types for user registration with AI-based identity verification.
+ * It includes functions and types for user registration.
  *
  * - aiEnhancedRegistration - The main function to initiate the AI-enhanced registration process.
  * - AIEnhancedRegistrationInput - The input type for the aiEnhancedRegistration function.
