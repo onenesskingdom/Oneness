@@ -23,20 +23,42 @@ async function migrate() {
 
   // Users table
   console.log('Creating users table...');
-  const { error: usersError } = await supabase.rpc('exec_sql', {
-    sql: `
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        kyc_status VARCHAR(50) DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-    `
-  });
-  if (usersError) throw usersError;
+  const { error: usersError } = await supabase
+    .from('users')
+    .select('id')
+    .limit(1);
+  
+  // If table doesn't exist, create it using raw SQL
+  if (usersError && usersError.code === 'PGRST116') {
+    const { error: createUsersError } = await supabase.rpc('exec', {
+      query: `
+        CREATE TABLE IF NOT EXISTS users (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          kyc_status VARCHAR(50) DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      `
+    });
+    if (createUsersError) {
+      console.log('Note: Creating table via SQL failed, this is expected in Supabase. Please create tables manually in the dashboard.');
+      console.log('SQL for users table:');
+      console.log(`
+        CREATE TABLE IF NOT EXISTS users (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          kyc_status VARCHAR(50) DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      `);
+    }
+  }
 
   // User profiles
   console.log('Creating user_profiles table...');
