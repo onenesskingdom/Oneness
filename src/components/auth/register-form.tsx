@@ -22,6 +22,7 @@ import { LoadingSpinner } from "@/lib/icons";
 import { CheckCircle } from "lucide-react"
 import { Card, CardContent } from "../ui/card";
 import { useRouter } from "next/navigation"
+import { login } from "@/lib/auth"
 
 const formSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }),
@@ -63,10 +64,14 @@ export default function RegisterForm() {
           title: "Registration successful",
           description: data.message,
         });
+        // Automatically log in the user after registration
+        // For now, we'll just set the login flag since we don't have full session data
+        // In a real app, you'd want to log the user in properly with the API
+        localStorage.setItem('isLoggedIn', 'true');
         setIsSuccess(true);
-        // Redirect to login after a short delay
+        // Redirect to dashboard after a short delay
         setTimeout(() => {
-          router.push('/login');
+          router.push('/dashboard');
         }, 2000);
       } else {
         toast({

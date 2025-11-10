@@ -76,5 +76,10 @@ export async function registerAction(values: z.infer<typeof registrationSchema>)
 
 
 export async function logoutAction() {
+    // Clear all authentication-related items from localStorage
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
     return { success: true, message: 'ログアウトしました' };
 }

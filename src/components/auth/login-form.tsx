@@ -20,6 +20,7 @@ import { useState } from "react"
 import { LoadingSpinner } from "@/lib/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { login } from "@/lib/auth";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -62,10 +63,8 @@ export default function LoginForm() {
           title: "Login successful",
           description: data.message,
         });
-        // Store session in localStorage (or use context/state management)
-        localStorage.setItem('auth_token', data.session.access_token);
-        localStorage.setItem('refresh_token', data.session.refresh_token);
-        localStorage.setItem('user', JSON.stringify(data.session.user));
+        // Store session using auth utility
+        login(data.session.access_token, data.session.refresh_token, data.session.user);
         router.push('/dashboard');
       } else {
         toast({

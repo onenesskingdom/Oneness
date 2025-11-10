@@ -54,9 +54,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        if (!isLoggedIn) {
-            router.replace('/');
+        // Check if we're running on the client side
+        if (typeof window !== 'undefined') {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const authToken = localStorage.getItem('auth_token');
+            
+            // If not logged in or missing auth token, redirect to login
+            if (!isLoggedIn || !authToken) {
+                router.replace('/login');
+            }
         }
     }, [router]);
 

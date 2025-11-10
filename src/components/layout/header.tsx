@@ -11,12 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { logoutAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
 
+  const { isLoggedIn } = useAuth();
   const isDashboard = pathname.startsWith('/dashboard');
 
   const handleLogout = async () => {
@@ -31,7 +33,7 @@ export default function Header() {
     }
   };
 
-  if (isDashboard) {
+  if (isDashboard || isLoggedIn) {
     return (
       <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">

@@ -15,6 +15,7 @@ import { useState, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fileToDataUri } from "@/lib/utils";
+import ProtectedRoute from "@/components/auth/protected-route";
 
 // Mock Data
 const userProfile = {
@@ -86,12 +87,14 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <Stories />
-            <CreatePostCard onNewPost={handleNewPost} />
-            {posts.map(post => <PostCard key={post.id} post={post} />)}
-             <RightSidebar />
-        </div>
+        <ProtectedRoute>
+            <div className="space-y-6">
+                <Stories />
+                <CreatePostCard onNewPost={handleNewPost} />
+                {posts.map(post => <PostCard key={post.id} post={post} />)}
+                <RightSidebar />
+            </div>
+        </ProtectedRoute>
     );
 }
 
