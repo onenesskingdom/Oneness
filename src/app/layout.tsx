@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
+import { FloatingAvatar } from '@/components/ai/floating-avatar';
 
 export const metadata: Metadata = {
   title: 'ワンネスキングダム',
@@ -30,6 +31,7 @@ export default function RootLayout({
           {/* The footer is removed from the main layout for dashboard view */}
         </div>
         <Toaster />
+        <FloatingAvatar position="bottom-right" size="medium" />
       </body>
     </html>
   );
