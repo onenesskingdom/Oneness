@@ -25,6 +25,7 @@ type Transaction = {
 
 interface TransactionHistoryProps {
     transactions: Transaction[];
+    loading?: boolean;
 }
 
 const statusVariantMap = {
@@ -50,7 +51,23 @@ const typeTextMap = {
 }
 
 
-export default function TransactionHistory({ transactions }: TransactionHistoryProps) {
+export default function TransactionHistory({ transactions, loading }: TransactionHistoryProps) {
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>取引履歴</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <span className="ml-2 text-muted-foreground">読み込み中...</span>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
     if (!transactions || transactions.length === 0) {
         return (
             <Card>

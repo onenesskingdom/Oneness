@@ -6,18 +6,33 @@ import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WKPWalletComponent } from "@/components/wallet/wkp-wallet";
 import { DonationPanel } from "@/components/wallet/donation-panel";
+import { useAuth } from "@/hooks/use-auth";
+import { LoadingSpinner } from "@/lib/icons";
+import { useEffect, useState } from "react";
 
 const ExchangeForm = dynamic(() => import("@/components/exchange/exchange-form"), { ssr: false });
 const TransactionHistory = dynamic(() => import("@/components/exchange/transaction-history"), { ssr: false });
 const BuyOpForm = dynamic(() => import("@/components/exchange/buy-op-form"), { ssr: false });
 
+interface Transaction {
+    id: string;
+    type: 'exchange' | 'purchase' | 'exchange_rejection';
+    date: Date;
+    op_amount: number;
+    currency: string;
+    amount: number;
+    status: 'pending' | 'approved' | 'processing' | 'completed' | 'rejected';
+}
 
 export default function ExchangePage() {
+    const { user, loading } = useAuth();
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [transactionsLoading, setTransactionsLoading] = useState(true);
 
-    // Mock data for now
-    const user = {
-        op_balance: 10000,
-        monthly_redeemed_op: 1000,
+    // Get user data from auth hook
+    const userData = {
+        op_balance: user?.points?.total || 0,
+        monthly_redeemed_op: 0, // This would need to be calculated from database
     }
     
     const exchangeRates = {
@@ -26,13 +41,67 @@ export default function ExchangePage() {
         op_to_btc: 0.00000015
     }
 
-    const transactions = [
-        { id: 'txn1', type: 'exchange' as const, date: new Date('2024-07-20'), op_amount: 500, currency: 'JPY', amount: 750, status: 'completed' as const },
-        { id: 'buy1', type: 'purchase' as const, date: new Date('2024-08-19'), op_amount: 2000, currency: 'JPY', amount: 2000, status: 'completed' as const },
-        { id: 'txn2', type: 'exchange' as const, date: new Date('2024-08-05'), op_amount: 1000, currency: 'USDT', amount: 10, status: 'approved' as const },
-        { id: 'txn3', type: 'exchange' as const, date: new Date('2024-08-15'), op_amount: 2000, currency: 'BTC', amount: 0.0003, status: 'pending' as const },
-        { id: 'txn4', type: 'exchange_rejection' as const, date: new Date('2024-08-18'), op_amount: 300, currency: 'JPY', amount: 450, status: 'rejected' as const },
-    ]
+    // Fetch user transactions
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            if (!user) return;
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) return;
+
+                const response = await fetch('/api/transactions', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setTransactions(data.transactions || []);
+                } else {
+                    console.error('Failed to fetch transactions');
+                    // Fallback to mock data if API fails
+                    setTransactions([
+                        { id: 'txn1', type: 'exchange' as const, date: new Date('2024-07-20'), op_amount: 500, currency: 'JPY', amount: 750, status: 'completed' as const },
+                        { id: 'buy1', type: 'purchase' as const, date: new Date('2024-08-19'), op_amount: 2000, currency: 'JPY', amount: 2000, status: 'completed' as const },
+                        { id: 'txn2', type: 'exchange' as const, date: new Date('2024-08-05'), op_amount: 1000, currency: 'USDT', amount: 10, status: 'approved' as const },
+                        { id: 'txn3', type: 'exchange' as const, date: new Date('2024-08-15'), op_amount: 2000, currency: 'BTC', amount: 0.0003, status: 'pending' as const },
+                        { id: 'txn4', type: 'exchange_rejection' as const, date: new Date('2024-08-18'), op_amount: 300, currency: 'JPY', amount: 450, status: 'rejected' as const },
+                    ]);
+                }
+            } catch (error) {
+                console.error('Error fetching transactions:', error);
+                // Fallback to mock data
+                setTransactions([
+                    { id: 'txn1', type: 'exchange' as const, date: new Date('2024-07-20'), op_amount: 500, currency: 'JPY', amount: 750, status: 'completed' as const },
+                    { id: 'buy1', type: 'purchase' as const, date: new Date('2024-08-19'), op_amount: 2000, currency: 'JPY', amount: 2000, status: 'completed' as const },
+                ]);
+            } finally {
+                setTransactionsLoading(false);
+            }
+        };
+
+        if (user) {
+            fetchTransactions();
+        } else {
+            setTransactionsLoading(false);
+        }
+    }, [user]);
+
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="text-center space-y-4">
+                        <LoadingSpinner className="h-8 w-8 mx-auto animate-spin" />
+                        <p className="text-muted-foreground">読み込み中...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -45,6 +114,11 @@ export default function ExchangePage() {
                     <p className="text-balance text-muted-foreground">
                         WKPを交換、寄付、またはチップを送信します。
                     </p>
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">
+                            現在のOP残高: <span className="font-semibold text-primary">🪙 {userData.op_balance.toLocaleString()} OP</span>
+                        </p>
+                    </div>
                 </div>
                 
                 <div className="grid lg:grid-cols-2 gap-8">
@@ -56,14 +130,17 @@ export default function ExchangePage() {
                                 <TabsTrigger value="buy">WKPを購入</TabsTrigger>
                             </TabsList>
                             <TabsContent value="exchange">
-                                <ExchangeForm user={user} exchangeRates={exchangeRates} />
+                                <ExchangeForm user={userData} exchangeRates={exchangeRates} />
                             </TabsContent>
                             <TabsContent value="buy">
-                                <BuyOpForm user={user} />
+                                <BuyOpForm user={userData} />
                             </TabsContent>
                         </Tabs>
                         
-                        <TransactionHistory transactions={transactions} />
+                        <TransactionHistory 
+                            transactions={transactions} 
+                            loading={transactionsLoading}
+                        />
                     </div>
                     
                     {/* Right Column - Wallet & Donations */}

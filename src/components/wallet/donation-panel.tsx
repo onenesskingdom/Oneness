@@ -45,55 +45,32 @@ export function DonationPanel({ className }: DonationPanelProps) {
   const [donationAmount, setDonationAmount] = useState('');
   const [currentPrice, setCurrentPrice] = useState(100);
   const [isDonating, setIsDonating] = useState(false);
+  const [campaigns, setCampaigns] = useState<DonationCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock donation campaigns
-  const campaigns: DonationCampaign[] = [
-    {
-      id: '1',
-      title: 'コミュニティガーデン整備',
-      description: '地域の人々が集まる緑豊かな空間を作ります。子供たちからお年寄りまで楽しめる場所です。',
-      targetAmount: 10000,
-      currentAmount: 6500,
-      organizer: {
-        name: '地域活性化委員会',
-        avatar: 'https://picsum.photos/seed/campaign1/100/100',
-        id: 'org_1'
-      },
-      category: 'community',
-      endDate: '2024-12-31',
-      supporters: 45
-    },
-    {
-      id: '2',
-      title: '災害支援基金',
-      description: '自然災害に見舞われた地域への緊急支援物資を提供します。',
-      targetAmount: 50000,
-      currentAmount: 32000,
-      organizer: {
-        name: 'ワンネス赤十字',
-        avatar: 'https://picsum.photos/seed/campaign2/100/100',
-        id: 'org_2'
-      },
-      category: 'emergency',
-      endDate: '2024-11-30',
-      supporters: 128
-    },
-    {
-      id: '3',
-      title: '教育支援プロジェクト',
-      description: '経済的に困難な学生たちに学習機会を提供する奨学金プログラムです。',
-      targetAmount: 25000,
-      currentAmount: 12000,
-      organizer: {
-        name: '教育未来基金',
-        avatar: 'https://picsum.photos/seed/campaign3/100/100',
-        id: 'org_3'
-      },
-      category: 'charity',
-      endDate: '2024-12-15',
-      supporters: 67
-    }
-  ];
+  // Fetch campaigns from API
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const response = await fetch('/api/campaigns');
+        if (response.ok) {
+          const data = await response.json();
+          setCampaigns(data.campaigns || []);
+        } else {
+          console.error('Failed to fetch campaigns');
+          // Fallback to empty array
+          setCampaigns([]);
+        }
+      } catch (error) {
+        console.error('Error fetching campaigns:', error);
+        setCampaigns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCampaigns();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = priceService.subscribe((data) => {
@@ -129,21 +106,51 @@ export function DonationPanel({ className }: DonationPanelProps) {
 
     setIsDonating(true);
     try {
-      // Mock donation - in production, this would call the real API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast({
-        title: '寄付ありがとうございます！',
-        description: `${selectedCampaign.title}に${formatWKP(amount)}を寄付しました。`
+      // Process donation via API
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch('/api/campaigns', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          campaignId: selectedCampaign.id,
+          amount: amount
+        }),
       });
-      
-      setDonationAmount('');
-      setSelectedCampaign(null);
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        toast({
+          title: '寄付ありがとうございます！',
+          description: `${selectedCampaign.title}に${formatWKP(amount)}を寄付しました。`
+        });
+        
+        // Refresh campaigns to update amounts
+        const campaignsResponse = await fetch('/api/campaigns');
+        if (campaignsResponse.ok) {
+          const campaignsData = await campaignsResponse.json();
+          setCampaigns(campaignsData.campaigns || []);
+        }
+        
+        setDonationAmount('');
+        setSelectedCampaign(null);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Donation failed');
+      }
     } catch (error) {
+      console.error('Donation error:', error);
       toast({
         variant: 'destructive',
         title: '寄付エラー',
-        description: '寄付の処理に失敗しました。'
+        description: error instanceof Error ? error.message : '寄付の処理に失敗しました。'
       });
     } finally {
       setIsDonating(false);

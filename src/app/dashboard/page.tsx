@@ -18,60 +18,67 @@ import { fileToDataUri } from "@/lib/utils";
 import ProtectedRoute from "@/components/auth/protected-route";
 import { useAuth } from "@/hooks/use-auth";
 import { TipButton } from "@/components/wallet/tip-button";
+import { useEffect } from "react";
 
-// Mock Data
-const userProfile = {
-    name: "愛 平和 (Ai Heiwa)",
-    username: "ai_heiwa",
-    avatarUrl: "https://picsum.photos/seed/user1/100/100",
-    op_balance: 12500,
-};
+interface Post {
+    id: number;
+    author: {
+        name: string;
+        username: string;
+        avatarUrl: string;
+    };
+    content: string;
+    imageUrl?: string;
+    imageHint?: string;
+    videoUrl?: string;
+    likes: number;
+    comments: number;
+    timestamp: string;
+}
 
-const stories = [
-    { id: 1, username: "Satoshi", avatarUrl: "https://picsum.photos/seed/story1/80/80" },
-    { id: 2, username: "Yuki", avatarUrl: "https://picsum.photos/seed/story2/80/80" },
-    { id: 3, username: "Haru", avatarUrl: "https://picsum.photos/seed/story3/80/80" },
-    { id: 4, username: "Kenji", avatarUrl: "https://picsum.photos/seed/story4/80/80" },
-    { id: 5, username: "Mei", avatarUrl: "https://picsum.photos/seed/story5/80/80" },
-    { id: 6, username: "Ren", avatarUrl: "https://picsum.photos/seed/story6/80/80" },
-];
+interface Story {
+    id: number;
+    username: string;
+    avatarUrl: string;
+}
 
-const initialPosts = [
-    {
-        id: 1,
-        author: { name: "コミュニティガーデン", username: "community_garden_jp", avatarUrl: "https://picsum.photos/seed/post1/80/80" },
-        content: "今日の収穫です！愛情を込めて育てた野菜は、格別な味がしますね。皆さんも、ぜひ土に触れる喜びを感じてみてください。 #家庭菜園 #オーガニック #貢献",
-        imageUrl: "https://picsum.photos/seed/p1/600/400",
-        imageHint: "fresh vegetables harvest",
-        likes: 128,
-        comments: 15,
-        timestamp: "2時間前",
-    },
-    {
-        id: 2,
-        author: { name: "ワンネスアート", username: "oneness_art", avatarUrl: "https://picsum.photos/seed/post2/80/80" },
-        content: "「調和」をテーマにした新作が完成しました。異なる色が混ざり合い、一つの美しい全体を創り出す様子は、私たちのコミュニティそのものです。 #アート #調和 #創造性",
-        imageUrl: "https://picsum.photos/seed/p2/600/700",
-        imageHint: "abstract painting harmony",
-        likes: 340,
-        comments: 45,
-        timestamp: "5時間前",
-    },
-];
-
-const suggestions = [
-    { id: 1, name: "未来技術ラボ", username: "future_tech_lab", avatarUrl: "https://picsum.photos/seed/sug1/80/80" },
-    { id: 2, name: "平和の祈り", username: "peace_prayer", avatarUrl: "https://picsum.photos/seed/sug2/80/80" },
-];
+interface Suggestion {
+    id: number;
+    name: string;
+    username: string;
+    avatarUrl: string;
+}
 
 // Main Component
 export default function DashboardPage() {
     const { user } = useAuth();
-    const [posts, setPosts] = useState(initialPosts);
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [stories, setStories] = useState<Story[]>([]);
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch live data
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                // In a real implementation, these would be separate API calls
+                // For now, we'll use empty arrays and let the user create content
+                setPosts([]);
+                setStories([]);
+                setSuggestions([]);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, [user]);
 
     const handleNewPost = (content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
-        const newPost: any = {
-            id: posts.length + 3,
+        const newPost: Post = {
+            id: Date.now(),
             author: {
                 name: user?.profile?.display_name || 'ユーザー',
                 username: user?.email?.split('@')[0] || 'user',
@@ -93,24 +100,45 @@ export default function DashboardPage() {
         setPosts([newPost, ...posts]);
     };
 
+    if (loading) {
+        return (
+            <ProtectedRoute>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                        <p className="text-muted-foreground">読み込み中...</p>
+                    </div>
+                </div>
+            </ProtectedRoute>
+        );
+    }
+
     return (
         <ProtectedRoute>
             <div className="space-y-6">
-                <Stories />
+                <Stories stories={stories} />
                 <CreatePostCard onNewPost={handleNewPost} />
-                {posts.map(post => <PostCard key={post.id} post={post} />)}
-                <RightSidebar />
+                {posts.length === 0 ? (
+                    <Card>
+                        <CardContent className="text-center py-8">
+                            <p className="text-muted-foreground">まだ投稿がありません。最初の投稿を作成しましょう！</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    posts.map(post => <PostCard key={post.id} post={post} />)
+                )}
+                <RightSidebar suggestions={suggestions} />
             </div>
         </ProtectedRoute>
     );
 }
 
 // Sub-components
-const Stories = () => (
+const Stories = ({ stories }: { stories: Story[] }) => (
     <Card>
         <CardContent className="p-4">
             <div className="flex space-x-4 overflow-x-auto pb-2">
-                {stories.map(story => (
+                {stories.map((story: Story) => (
                     <Link href="/dashboard/profile" key={story.id}>
                         <div className="flex flex-col items-center space-y-1 flex-shrink-0 cursor-pointer">
                             <Avatar className="h-16 w-16 border-2 border-pink-500 p-0.5">
@@ -345,12 +373,12 @@ const PostCard = ({ post }: { post: any }) => {
 }
 
 
-const RightSidebar = () => (
+const RightSidebar = ({ suggestions }: { suggestions: Suggestion[] }) => (
     <aside className="hidden lg:block sticky top-24 self-start space-y-6 lg:w-[320px]">
         <Card>
             <CardHeader><h3 className="font-bold">フォローするかも</h3></CardHeader>
             <CardContent className="space-y-4">
-                {suggestions.map(sug => (
+                {suggestions.map((sug: Suggestion) => (
                     <div key={sug.id} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Link href="/dashboard/profile">
