@@ -18,7 +18,7 @@ export default function Header() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const isDashboard = pathname.startsWith('/dashboard');
 
   const handleLogout = async () => {
@@ -67,18 +67,23 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src="https://picsum.photos/seed/user1/100/100" alt="User" />
-                    <AvatarFallback>A</AvatarFallback>
+                    <AvatarImage src={user?.profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"} alt="User" />
+                    <AvatarFallback>{user?.profile?.display_name?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">愛 平和</p>
+                    <p className="text-sm font-medium leading-none">{user?.profile?.display_name || 'ユーザー'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      ai_heiwa
+                      {user?.email || 'user@example.com'}
                     </p>
+                    {user?.points && (
+                      <p className="text-xs leading-none text-primary font-semibold">
+                        🪙 {user.points.total} OP
+                      </p>
+                    )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

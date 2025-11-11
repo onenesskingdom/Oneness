@@ -37,15 +37,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', data.user.id)
-      .single();
+    // Get complete user data including profile and associated tables
+    const [profile, pointsData, avatarState] = await Promise.all([
+      // User profile
+      supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', data.user.id)
+        .single()
+        .then(result => ({ data: result.data, error: result.error })),
+      
+      // User points summary
+      supabase
+        .from('points_ledger')
+        .select('amount, type, created_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+        .then(result => ({ data: result.data, error: result.error })),
+      
+      // AI avatar state
+      supabase
+        .from('ai_avatar_state')
+        .select('state')
+        .eq('user_id', data.user.id)
+        .single()
+        .then(result => ({ data: result.data, error: result.error }))
+    ]);
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Profile fetch error:', profileError);
+    // Calculate total points
+    const totalPoints = pointsData.data?.reduce((sum, entry) => sum + entry.amount, 0) || 0;
+
+    // Handle profile errors gracefully
+    if (profile.error && profile.error.code !== 'PGRST116') {
+      console.error('Profile fetch error:', profile.error);
+    }
+
+    // Handle points errors gracefully
+    if (pointsData.error) {
+      console.error('Points fetch error:', pointsData.error);
+    }
+
+    // Handle avatar state errors gracefully
+    if (avatarState.error && avatarState.error.code !== 'PGRST116') {
+      console.error('Avatar state fetch error:', avatarState.error);
     }
 
     return NextResponse.json({
@@ -57,7 +92,12 @@ export async function POST(request: NextRequest) {
         user: {
           id: data.user.id,
           email: data.user.email,
-          profile: profile || null
+          profile: profile.data || null,
+          points: {
+            total: totalPoints,
+            history: pointsData.data || []
+          },
+          avatarState: avatarState.data?.state || null
         }
       }
     });

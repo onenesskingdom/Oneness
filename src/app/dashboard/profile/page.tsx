@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bookmark, Grid3x3, Settings, UserPlus, Tag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 const userProfile = {
     name: "愛 平和 (Ai Heiwa)",
@@ -26,6 +27,19 @@ const userPosts = [
 
 
 export default function ProfilePage() {
+    const { user } = useAuth();
+    
+    const userProfile = {
+        name: user?.profile?.display_name || 'ユーザー',
+        username: user?.email?.split('@')[0] || 'user',
+        avatarUrl: user?.profile?.avatar_url || "https://picsum.photos/seed/user1/200/200",
+        bio: user?.profile?.bio || "ワンネスキングダムの市民。貢献とつながりを大切にしています。",
+        posts: 0, // This would come from database in future
+        followers: 0, // This would come from database in future
+        following: 0, // This would come from database in future
+        op_balance: user?.points?.total || 0,
+    };
+
     return (
         <div className="container mx-auto max-w-4xl py-8">
             <header className="flex items-center gap-8 md:gap-16 px-4">
@@ -50,6 +64,7 @@ export default function ProfilePage() {
                         <p><span className="font-semibold">{userProfile.posts}</span> 投稿</p>
                         <p><span className="font-semibold">{userProfile.followers}</span> フォロワー</p>
                         <p><span className="font-semibold">{userProfile.following}</span> フォロー中</p>
+                        <p><span className="font-semibold text-primary">🪙 {userProfile.op_balance}</span> OP</p>
                     </div>
                      <div>
                         <h2 className="font-semibold">{userProfile.name}</h2>

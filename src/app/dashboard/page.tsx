@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fileToDataUri } from "@/lib/utils";
 import ProtectedRoute from "@/components/auth/protected-route";
+import { useAuth } from "@/hooks/use-auth";
 
 // Mock Data
 const userProfile = {
@@ -64,12 +65,17 @@ const suggestions = [
 
 // Main Component
 export default function DashboardPage() {
+    const { user } = useAuth();
     const [posts, setPosts] = useState(initialPosts);
 
     const handleNewPost = (content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
         const newPost: any = {
             id: posts.length + 3,
-            author: userProfile,
+            author: {
+                name: user?.profile?.display_name || 'ユーザー',
+                username: user?.email?.split('@')[0] || 'user',
+                avatarUrl: user?.profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+            },
             content,
             likes: 0,
             comments: 0,
@@ -122,6 +128,7 @@ const Stories = () => (
 const EMOJIS = ['😊', '😂', '😍', '🤔', '😢', '🙏', '❤️', '✨', '🎉', '🔥', '👍', '🌿'];
 
 const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void }) => {
+    const { user } = useAuth();
     const [content, setContent] = useState('');
     const [mediaUrl, setMediaUrl] = useState<string | null>(null);
     const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
@@ -185,12 +192,12 @@ const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?:
                 <div className="flex items-start gap-3">
                     <Link href="/dashboard/profile">
                         <Avatar>
-                            <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
-                            <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={user?.profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"} alt={user?.profile?.display_name || 'ユーザー'} />
+                            <AvatarFallback>{user?.profile?.display_name?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                     </Link>
                     <Textarea 
-                        placeholder={`何を考えていますか、${userProfile.name}さん？`} 
+                        placeholder={`何を考えていますか、${user?.profile?.display_name || 'ユーザー'}さん？`} 
                         className="flex-grow bg-muted border-none min-h-[60px]"
                         value={content}
                         onChange={(e) => setContent(e.target.value)}

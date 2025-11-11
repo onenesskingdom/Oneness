@@ -42,23 +42,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user profile (skip if table doesn't exist yet)
+    // Create user profile and associated data
     try {
+      // Insert user profile
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
           user_id: authData.user.id,
-          display_name: displayName
+          display_name: displayName,
+          rank: 'member'
         });
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
-        // Don't fail registration if profile creation fails, just log it
-        // The user can create their profile later
+        throw profileError;
       }
+
+      // Initialize points ledger with welcome bonus
+      const { error: pointsError } = await supabase
+        .from('points_ledger')
+        .insert({
+          user_id: authData.user.id,
+          amount: 100, // Welcome bonus points
+          type: 'welcome_bonus'
+        });
+
+      if (pointsError) {
+        console.error('Points initialization error:', pointsError);
+        // Don't fail registration for points error
+      }
+
+      // Initialize AI avatar state
+      const { error: avatarError } = await supabase
+        .from('ai_avatar_state')
+        .insert({
+          user_id: authData.user.id,
+          state: {
+            preferences: {},
+            last_interaction: null,
+            mood: 'neutral'
+          }
+        });
+
+      if (avatarError) {
+        console.error('Avatar state initialization error:', avatarError);
+        // Don't fail registration for avatar error
+      }
+
     } catch (profileErr) {
-      console.error('Profile table might not exist yet:', profileErr);
-      // Continue with registration even if profile table doesn't exist
+      console.error('User data creation error:', profileErr);
+      return NextResponse.json(
+        { error: 'Failed to create user profile' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
