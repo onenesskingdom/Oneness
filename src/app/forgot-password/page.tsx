@@ -42,6 +42,8 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
+      console.log('Submitting password reset request for:', values.email);
+      
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
@@ -51,25 +53,27 @@ export default function ForgotPasswordPage() {
       });
 
       const data = await response.json();
+      console.log('Reset password response:', data);
 
       if (response.ok) {
         toast({
-          title: "Reset email sent",
-          description: data.message,
+          title: "リセットメールを送信しました",
+          description: `${values.email}にパスワードリセット用のメールを送信しました。メールをご確認ください。`,
         });
         setIsSuccess(true);
       } else {
         toast({
           variant: "destructive",
-          title: "Request failed",
-          description: data.error || 'Something went wrong',
+          title: "送信に失敗しました",
+          description: data.error || 'エラーが発生しました。メールアドレスを確認してもう一度お試しください。',
         });
       }
     } catch (error) {
+      console.error('Forgot password error:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred.",
+        title: "エラー",
+        description: "予期せぬエラーが発生しました。しばらくしてからもう一度お試しください。",
       });
     } finally {
       setIsLoading(false);
@@ -84,21 +88,26 @@ export default function ForgotPasswordPage() {
             <Link href="/" className="flex justify-center items-center gap-2 mb-4">
               <OnenessKingdomLogo className="h-10 w-10" />
             </Link>
-            <h1 className="text-3xl font-bold font-headline">Check your email</h1>
+            <h1 className="text-3xl font-bold font-headline">メールをご確認ください</h1>
             <p className="text-balance text-muted-foreground">
-              We sent a password reset link to your email address.
+              パスワードリセット用のリンクをメールで送信しました。
             </p>
           </div>
           <Card>
             <CardContent className="p-6">
               <div className="text-center space-y-4">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
-                <p className="text-muted-foreground">
-                  Click the link in the email to reset your password.
-                </p>
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">
+                    メール内のリンクをクリックしてパスワードをリセットしてください。
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    ※ メールが届かない場合は、迷惑メールフォルダもご確認ください。
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Button variant="outline" asChild className="w-full">
-                    <Link href="/login">Back to login</Link>
+                    <Link href="/login">ログインに戻る</Link>
                   </Button>
                 </div>
               </div>

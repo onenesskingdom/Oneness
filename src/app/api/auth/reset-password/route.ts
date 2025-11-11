@@ -30,19 +30,29 @@ export async function POST(request: NextRequest) {
     if (email && !token) {
       const { email: validatedEmail } = resetRequestSchema.parse({ email });
       
+      // Get the site URL from environment or request headers
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                     request.headers.get('origin') || 
+                     'http://localhost:3000';
+      
+      console.log('Sending password reset email to:', validatedEmail);
+      console.log('Redirect URL:', `${siteUrl}/reset-password`);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(validatedEmail, {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password?token=true`
+        redirectTo: `${siteUrl}/reset-password`
       });
 
       if (error) {
+        console.error('Supabase reset password error:', error);
         return NextResponse.json(
           { error: error.message },
           { status: 400 }
         );
       }
 
+      console.log('Password reset email sent successfully to:', validatedEmail);
       return NextResponse.json({
-        message: 'Password reset email sent'
+        message: 'Password reset email sent successfully'
       });
     }
 
