@@ -144,7 +144,6 @@ export default function DashboardPage() {
                 ) : (
                     posts.map(post => <PostCard key={post.id} post={post} />)
                 )}
-                <RightSidebar suggestions={suggestions} />
             </div>
         </ProtectedRoute>
     );
@@ -419,31 +418,3 @@ const PostCard = ({ post }: { post: any }) => {
         </Card>
     );
 }
-
-
-const RightSidebar = ({ suggestions }: { suggestions: Suggestion[] }) => (
-    <aside className="hidden lg:block sticky top-24 self-start space-y-6 lg:w-[320px]">
-        <Card>
-            <CardHeader><h3 className="font-bold">フォローするかも</h3></CardHeader>
-            <CardContent className="space-y-4">
-                {suggestions.map((sug: Suggestion) => (
-                    <div key={sug.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Link href="/dashboard/profile">
-                                <Avatar>
-                                    <AvatarImage src={sug.avatarUrl} alt={sug.name} />
-                                    <AvatarFallback>{sug.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            </Link>
-                            <div>
-                                <Link href="/dashboard/profile"><p className="font-semibold hover:underline">{sug.name}</p></Link>
-                                <p className="text-sm text-muted-foreground">@{sug.username}</p>
-                            </div>
-                        </div>
-                        <Button size="sm" variant="outline">フォロー</Button>
-                    </div>
-                ))}
-            </CardContent>
-        </Card>
-    </aside>
-);

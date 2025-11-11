@@ -1,6 +1,8 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Bell, Clapperboard, Compass, Home, Send, User, ShoppingBag } from "lucide-react";
 import Link from "next/link";
@@ -110,6 +112,77 @@ const LeftSidebar = () => {
     );
 };
 
+const RightSidebar = () => {
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSuggestions = async () => {
+            try {
+                // In a real implementation, this would fetch from API
+                // For now, we'll use empty array
+                setSuggestions([]);
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSuggestions();
+    }, []);
+
+    if (loading) {
+        return (
+            <aside className="hidden lg:block sticky top-24 self-start space-y-6 w-[320px]">
+                <div className="space-y-4">
+                    <div className="h-4 bg-muted rounded w-1/3"></div>
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-muted rounded-full"></div>
+                            <div className="flex-1">
+                                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                                <div className="h-3 bg-muted rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </aside>
+        );
+    }
+
+    return (
+        <aside className="hidden lg:block sticky top-24 self-start space-y-6 w-[320px]">
+            <Card>
+                <CardHeader><h3 className="font-bold">フォローするかも</h3></CardHeader>
+                <CardContent className="space-y-4">
+                    {suggestions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">現在おすすめはありません</p>
+                    ) : (
+                        suggestions.map((sug: any) => (
+                            <div key={sug.id} className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Link href="/dashboard/profile">
+                                        <Avatar>
+                                            <AvatarImage src={sug.avatarUrl} alt={sug.name} />
+                                            <AvatarFallback>{sug.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                    </Link>
+                                    <div>
+                                        <Link href="/dashboard/profile"><p className="font-semibold hover:underline">{sug.name}</p></Link>
+                                        <p className="text-sm text-muted-foreground">@{sug.username}</p>
+                                    </div>
+                                </div>
+                                <Button size="sm" variant="outline">フォロー</Button>
+                            </div>
+                        ))
+                    )}
+                </CardContent>
+            </Card>
+        </aside>
+    );
+};
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const router = useRouter();
 
@@ -128,12 +201,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
     return (
         <div className="bg-background text-foreground min-h-screen">
-             <div className="container mx-auto grid grid-cols-1 md:grid-cols-[240px_1fr] lg:grid-cols-[240px_1fr_320px] gap-8 py-8">
+            <div className="container mx-auto grid grid-cols-1 md:grid-cols-[240px_1fr_320px] gap-8 py-8">
                 <LeftSidebar />
                 <main>
                     {children}
                 </main>
-             </div>
+                <RightSidebar />
+            </div>
         </div>
     )
 }
