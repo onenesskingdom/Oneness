@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { OnenessKingdomLogo } from '@/lib/icons';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Search, MessageSquare, Bell } from 'lucide-react';
+import { Search, MessageSquare, Bell, Wallet } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -51,6 +51,12 @@ export default function Header() {
 
           <nav className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild>
+              <Link href="/dashboard/wallet">
+                <Wallet className="h-6 w-6" />
+                <span className="sr-only">ウォレット</span>
+              </Link>
+            </Button>
+            <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild>
               <Link href="/dashboard/notifications">
                 <MessageSquare className="h-6 w-6" />
                 <span className="sr-only">メッセージ</span>
@@ -87,6 +93,7 @@ export default function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild><Link href="/dashboard/wallet">🪙 ウォレット</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link href="/dashboard/profile">プロフィール</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link href="/dashboard/settings">設定</Link></DropdownMenuItem>
                 <DropdownMenuSeparator />

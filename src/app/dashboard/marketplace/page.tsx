@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Search, Filter, Star, MapPin, Clock } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Search, Filter, Star, MapPin, Clock, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TipButton } from "@/components/wallet/tip-button";
+import { formatWKP, calculateJPYValue, priceService } from "@/lib/wkp-token";
+import { useEffect } from "react";
 
 // Mock marketplace data
 const marketplaceItems = [
@@ -140,7 +143,18 @@ export default function MarketplacePage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("すべて");
     const [sortBy, setSortBy] = useState("newest");
+    const [currentPrice, setCurrentPrice] = useState(100);
     const { toast } = useToast();
+
+    // Subscribe to live price updates
+    useEffect(() => {
+        const unsubscribe = priceService.subscribe((data) => {
+            setCurrentPrice(data.price);
+        });
+        return () => {
+            unsubscribe();
+        };
+    }, []);
 
     const filteredItems = marketplaceItems.filter(item => {
         const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,6 +174,14 @@ export default function MarketplacePage() {
         toast({
             title: "共有しました",
             description: "商品リンクをコピーしました。",
+        });
+    };
+
+    const handlePurchase = (item: any) => {
+        const wkpPrice = Math.floor(item.price / currentPrice);
+        toast({
+            title: "購入確認",
+            description: `${item.title}を${formatWKP(wkpPrice)}で購入しますか？`,
         });
     };
 
@@ -298,7 +320,14 @@ export default function MarketplacePage() {
 
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl font-bold text-primary">¥{item.price.toLocaleString()}</span>
+                                        <div className="text-left">
+                                            <div className="text-2xl font-bold text-primary">
+                                                {formatWKP(Math.floor(item.price / currentPrice))}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                約 ¥{item.price.toLocaleString()}
+                                            </div>
+                                        </div>
                                         <Badge variant="outline" className="text-xs">
                                             {item.condition}
                                         </Badge>
@@ -321,6 +350,11 @@ export default function MarketplacePage() {
                                         <MessageCircle className="h-4 w-4" />
                                         {item.comments}
                                     </span>
+                                    <TipButton 
+                                        recipientId={item.seller.name} 
+                                        recipientName={item.seller.name}
+                                        className="text-xs"
+                                    />
                                 </div>
                                 <Button
                                     variant="ghost"
@@ -340,8 +374,12 @@ export default function MarketplacePage() {
                                 >
                                     メッセージ
                                 </Button>
-                                <Button className="flex-1">
-                                    購入する
+                                <Button 
+                                    className="flex-1"
+                                    onClick={() => handlePurchase(item)}
+                                >
+                                    <ShoppingBag className="h-4 w-4 mr-2" />
+                                    WKPで購入
                                 </Button>
                             </div>
                         </CardFooter>

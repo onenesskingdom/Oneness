@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { fileToDataUri } from "@/lib/utils";
 import ProtectedRoute from "@/components/auth/protected-route";
 import { useAuth } from "@/hooks/use-auth";
+import { TipButton } from "@/components/wallet/tip-button";
 
 // Mock Data
 const userProfile = {
@@ -328,6 +329,11 @@ const PostCard = ({ post }: { post: any }) => {
                     </Button>
                     <Button variant="ghost" className="text-muted-foreground" onClick={showComingSoon}><MessageCircle className="mr-2" />コメント</Button>
                     <Button variant="ghost" className="text-muted-foreground" onClick={showComingSoon}><Send className="mr-2" />シェア</Button>
+                    <TipButton 
+                        recipientId={post.author.username} 
+                        recipientName={post.author.name}
+                        className="text-muted-foreground"
+                    />
                     <Button variant="ghost" className="text-muted-foreground" onClick={handleSave}>
                         <Bookmark className={isSaved ? "mr-2 text-primary fill-current" : "mr-2"} />
                         保存
