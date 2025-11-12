@@ -16,6 +16,7 @@ interface UserProfile {
     username: string;
     email: string;
     avatarUrl: string;
+    bannerUrl: string;
     bio: string;
     posts: number;
     followers: number;
@@ -69,6 +70,7 @@ export default function ProfilePage() {
                         username: user?.email?.split('@')[0] || 'user',
                         email: user?.email || '',
                         avatarUrl: user?.profile?.avatar_url || "https://picsum.photos/seed/user1/200/200",
+                        bannerUrl: user?.profile?.banner_url || "/default_banner.png",
                         bio: user?.profile?.bio || "ワンネスキングダムの市民。貢献とつながりを大切にしています。",
                         posts: 0,
                         followers: 0,
@@ -115,6 +117,19 @@ export default function ProfilePage() {
 
     return (
         <div className="container mx-auto max-w-4xl py-8">
+            {/* Desktop Banner Section */}
+            <div className="hidden md:block mb-6">
+                <div className="relative h-48 md:h-64 rounded-lg overflow-hidden">
+                    <Image 
+                        src={userProfile.bannerUrl} 
+                        alt="Profile Banner" 
+                        layout="fill"
+                        objectFit="cover"
+                        className="w-full h-full"
+                    />
+                </div>
+            </div>
+
             <header className="flex items-center gap-8 md:gap-16 px-4">
                 <Avatar className="w-24 h-24 md:w-36 md:h-36 border-4 border-background ring-2 ring-primary">
                     <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />

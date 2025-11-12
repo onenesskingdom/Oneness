@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         .insert({
           user_id: authData.user.id,
           display_name: displayName,
+          banner_url: '/default_banner.png',
           rank: 'member'
         });
 

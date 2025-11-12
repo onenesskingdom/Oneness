@@ -119,6 +119,7 @@ export async function GET(request: NextRequest) {
         username: user.email?.split('@')[0] || 'user',
         email: user.email,
         avatarUrl: profile?.avatar_url || "https://picsum.photos/seed/user1/200/200",
+        bannerUrl: profile?.banner_url || "/default_banner.png",
         bio: profile?.bio || "ワンネスキングダムの市民。貢献とつながりを大切にしています。",
         posts: postsCount,
         followers: followersCount,
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // Update user profile
-    const { display_name, bio, avatar_url } = await request.json();
+    const { display_name, bio, avatar_url, banner_url } = await request.json();
     
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -183,6 +184,7 @@ export async function PUT(request: NextRequest) {
         display_name: display_name,
         bio: bio,
         avatar_url: avatar_url,
+        banner_url: banner_url,
         updated_at: new Date().toISOString()
       })
       .select()

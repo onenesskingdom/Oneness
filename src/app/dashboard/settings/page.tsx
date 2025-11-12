@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/lib/icons";
+import { BannerUpload } from "@/components/profile/banner-upload";
 
 interface UserProfile {
     id: string;
@@ -20,6 +21,7 @@ interface UserProfile {
     username: string;
     email: string;
     avatarUrl: string;
+    bannerUrl: string;
     bio: string;
     created_at: string;
     updated_at: string;
@@ -31,10 +33,12 @@ export default function SettingsPage() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [bannerUploading, setBannerUploading] = useState(false);
     const [formData, setFormData] = useState({
         display_name: '',
         bio: '',
-        avatar_url: ''
+        avatar_url: '',
+        banner_url: ''
     });
 
     useEffect(() => {
@@ -59,7 +63,8 @@ export default function SettingsPage() {
                     setFormData({
                         display_name: data.profile.name || '',
                         bio: data.profile.bio || '',
-                        avatar_url: data.profile.avatarUrl || ''
+                        avatar_url: data.profile.avatarUrl || '',
+                        banner_url: data.profile.bannerUrl || '/default_banner.png'
                     });
                 } else {
                     console.error('Failed to fetch profile data');
@@ -70,6 +75,7 @@ export default function SettingsPage() {
                         username: user?.email?.split('@')[0] || 'user',
                         email: user?.email || '',
                         avatarUrl: user?.profile?.avatar_url || "https://picsum.photos/seed/user1/200/200",
+                        bannerUrl: user?.profile?.banner_url || "/default_banner.png",
                         bio: user?.profile?.bio || "ワンネスキングダムの市民。貢献とつながりを大切にしています。",
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
@@ -78,7 +84,8 @@ export default function SettingsPage() {
                     setFormData({
                         display_name: fallbackProfile.name,
                         bio: fallbackProfile.bio,
-                        avatar_url: fallbackProfile.avatarUrl
+                        avatar_url: fallbackProfile.avatarUrl,
+                        banner_url: fallbackProfile.bannerUrl
                     });
                 }
             } catch (error) {
@@ -90,6 +97,59 @@ export default function SettingsPage() {
 
         fetchProfileData();
     }, [user]);
+
+    const handleBannerUpload = async (bannerUrl: string) => {
+        // If it's the default banner, just update the form data
+        if (bannerUrl === '/default_banner.png') {
+            setFormData(prev => ({ ...prev, banner_url: bannerUrl }));
+            return;
+        }
+
+        setBannerUploading(true);
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                throw new Error('Not authenticated');
+            }
+
+            // Convert data URL to blob for upload
+            const response = await fetch(bannerUrl);
+            const blob = await response.blob();
+            const file = new File([blob], 'banner.jpg', { type: 'image/jpeg' });
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadResponse = await fetch('/api/upload/banner', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            if (uploadResponse.ok) {
+                const data = await uploadResponse.json();
+                setFormData(prev => ({ ...prev, banner_url: data.bannerUrl }));
+                toast({
+                    title: 'バナーを更新しました',
+                    description: 'プロフィールバナーが正常に更新されました。'
+                });
+            } else {
+                const errorData = await uploadResponse.json();
+                throw new Error(errorData.error || 'Failed to upload banner');
+            }
+        } catch (error) {
+            console.error('Error uploading banner:', error);
+            toast({
+                variant: 'destructive',
+                title: 'アップロードエラー',
+                description: error instanceof Error ? error.message : 'バナーのアップロードに失敗しました。'
+            });
+        } finally {
+            setBannerUploading(false);
+        }
+    };
 
     const handleProfileSave = async () => {
         setSaving(true);
@@ -122,6 +182,7 @@ export default function SettingsPage() {
                         name: formData.display_name,
                         bio: formData.bio,
                         avatarUrl: formData.avatar_url,
+                        bannerUrl: formData.banner_url,
                         updated_at: new Date().toISOString()
                     });
                 }
@@ -182,6 +243,18 @@ export default function SettingsPage() {
                             <CardDescription>公開プロフィール情報を更新します。</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Banner Upload */}
+                            <div className="space-y-2">
+                                <Label>プロフィールバナー</Label>
+                                <BannerUpload
+                                    currentBanner={formData.banner_url}
+                                    onBannerChange={handleBannerUpload}
+                                    isUploading={bannerUploading}
+                                />
+                            </div>
+                            
+                            <Separator />
+                            
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-16 w-16">
                                     <AvatarImage src={userProfile.avatarUrl} />
