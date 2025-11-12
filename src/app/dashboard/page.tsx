@@ -34,6 +34,8 @@ interface Post {
     likes: number;
     comments: number;
     timestamp: string;
+    isLiked: boolean;
+    isBookmarked: boolean;
 }
 
 interface Story {
@@ -76,11 +78,25 @@ export default function DashboardPage() {
                         const profileData = await profileResponse.json();
                         setUserProfile(profileData.profile);
                     }
+
+                    // Fetch posts from API
+                    const postsResponse = await fetch('/api/posts', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    if (postsResponse.ok) {
+                        const postsData = await postsResponse.json();
+                        setPosts(postsData.posts || []);
+                    } else {
+                        console.error('Failed to fetch posts');
+                        setPosts([]);
+                    }
                 }
 
-                // In a real implementation, these would be separate API calls
-                // For now, we'll use empty arrays and let the user create content
-                setPosts([]);
+                // Set empty arrays for stories and suggestions for now
                 setStories([]);
                 setSuggestions([]);
             } catch (error) {
@@ -93,28 +109,66 @@ export default function DashboardPage() {
         fetchDashboardData();
     }, [user]);
 
-    const handleNewPost = (content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
-        const newPost: Post = {
-            id: Date.now(),
-            author: {
-                name: userProfile?.name || user?.profile?.display_name || 'ユーザー',
-                username: userProfile?.username || user?.email?.split('@')[0] || 'user',
-                avatarUrl: userProfile?.avatarUrl || user?.profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"
-            },
-            content,
-            likes: 0,
-            comments: 0,
-            timestamp: "たった今",
-        };
-        if (mediaUrl) {
-            if (mediaType === 'image') {
-                 newPost.imageUrl = mediaUrl;
-                 newPost.imageHint = "user uploaded content";
-            } else {
-                 newPost.videoUrl = mediaUrl;
+    const handleNewPost = async (content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                throw new Error('Not authenticated');
             }
+
+            const postData: any = { content };
+            if (mediaUrl) {
+                if (mediaType === 'image') {
+                    postData.imageUrl = mediaUrl;
+                    postData.imageHint = "user uploaded content";
+                } else {
+                    postData.videoUrl = mediaUrl;
+                }
+            }
+
+            const response = await fetch('/api/posts', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(postData),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setPosts([data.post, ...posts]);
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create post');
+            }
+        } catch (error) {
+            console.error('Error creating post:', error);
+            // Fallback to local state if API fails
+            const newPost: Post = {
+                id: Date.now(),
+                author: {
+                    name: userProfile?.name || user?.profile?.display_name || 'ユーザー',
+                    username: userProfile?.username || user?.email?.split('@')[0] || 'user',
+                    avatarUrl: userProfile?.avatarUrl || user?.profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+                },
+                content,
+                likes: 0,
+                comments: 0,
+                timestamp: "たった今",
+                isLiked: false,
+                isBookmarked: false
+            };
+            if (mediaUrl) {
+                if (mediaType === 'image') {
+                     newPost.imageUrl = mediaUrl;
+                     newPost.imageHint = "user uploaded content";
+                } else {
+                     newPost.videoUrl = mediaUrl;
+                }
+            }
+            setPosts([newPost, ...posts]);
         }
-        setPosts([newPost, ...posts]);
     };
 
     if (loading) {
@@ -172,7 +226,7 @@ const Stories = ({ stories }: { stories: Story[] }) => (
 
 const EMOJIS = ['😊', '😂', '😍', '🤔', '😢', '🙏', '❤️', '✨', '🎉', '🔥', '👍', '🌿'];
 
-const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void }) => {
+const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => Promise<void> }) => {
     const { user } = useAuth();
     const [content, setContent] = useState('');
     const [mediaUrl, setMediaUrl] = useState<string | null>(null);
@@ -180,6 +234,7 @@ const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?:
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const [userProfile, setUserProfile] = useState<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Fetch fresh user profile data
     useEffect(() => {
@@ -236,7 +291,7 @@ const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?:
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!content.trim() && !mediaUrl) {
             toast({
                 variant: 'destructive',
@@ -245,17 +300,30 @@ const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?:
             });
             return;
         }
-        onNewPost(content, mediaUrl || undefined, mediaType || undefined);
-        setContent('');
-        setMediaUrl(null);
-        setMediaType(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+
+        setIsSubmitting(true);
+        try {
+            await onNewPost(content, mediaUrl || undefined, mediaType || undefined);
+            setContent('');
+            setMediaUrl(null);
+            setMediaType(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+            toast({
+                title: '投稿しました！',
+                description: 'あなたの考えが共有されました。',
+            });
+        } catch (error) {
+            console.error('Error submitting post:', error);
+            toast({
+                variant: 'destructive',
+                title: '投稿エラー',
+                description: '投稿の保存中にエラーが発生しました。',
+            });
+        } finally {
+            setIsSubmitting(false);
         }
-        toast({
-            title: '投稿しました！',
-            description: 'あなたの考えが共有されました。',
-        });
     };
     
     const addEmoji = (emoji: string) => {
@@ -315,38 +383,231 @@ const CreatePostCard = ({ onNewPost }: { onNewPost: (content: string, mediaUrl?:
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <Button onClick={handleSubmit} disabled={!content.trim() && !mediaUrl}>投稿する</Button>
+                    <Button onClick={handleSubmit} disabled={(!content.trim() && !mediaUrl) || isSubmitting}>
+                    {isSubmitting ? '投稿中...' : '投稿する'}
+                </Button>
                 </div>
             </CardContent>
         </Card>
     );
 };
 
-const PostCard = ({ post }: { post: any }) => {
+const PostCard = ({ post }: { post: Post }) => {
     const { toast } = useToast();
-    const [isLiked, setIsLiked] = useState(false);
+    const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.likes);
-    const [isSaved, setIsSaved] = useState(false);
+    const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
+    const [showComments, setShowComments] = useState(false);
+    const [comments, setComments] = useState<any[]>([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [newComment, setNewComment] = useState('');
+    const [submittingComment, setSubmittingComment] = useState(false);
+    const [showShareOptions, setShowShareOptions] = useState(false);
+    const [shareUrls, setShareUrls] = useState<any>(null);
 
-    const handleLike = () => {
-        setIsLiked(!isLiked);
-        setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
+    const handleLike = async () => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                toast({
+                    variant: 'destructive',
+                    title: '認証エラー',
+                    description: 'ログインしてください。',
+                });
+                return;
+            }
+
+            const response = await fetch(`/api/posts/${post.id}/like`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setIsLiked(data.isLiked);
+                setLikeCount(data.likesCount);
+                toast({
+                    title: data.message,
+                });
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to toggle like');
+            }
+        } catch (error) {
+            console.error('Error toggling like:', error);
+            toast({
+                variant: 'destructive',
+                title: 'エラー',
+                description: 'いいねの処理中にエラーが発生しました。',
+            });
+        }
     };
 
-    const handleSave = () => {
-        setIsSaved(!isSaved);
-        toast({
-            title: isSaved ? "保存を取り消しました" : "投稿を保存しました",
-            description: "保存した投稿はプロフィールから確認できます。",
-        });
+    const handleBookmark = async () => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                toast({
+                    variant: 'destructive',
+                    title: '認証エラー',
+                    description: 'ログインしてください。',
+                });
+                return;
+            }
+
+            const response = await fetch(`/api/posts/${post.id}/bookmark`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setIsBookmarked(data.isBookmarked);
+                toast({
+                    title: data.message,
+                });
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to toggle bookmark');
+            }
+        } catch (error) {
+            console.error('Error toggling bookmark:', error);
+            toast({
+                variant: 'destructive',
+                title: 'エラー',
+                description: '保存の処理中にエラーが発生しました。',
+            });
+        }
     };
-    
-    const showComingSoon = () => {
-        toast({
-            title: "近日公開",
-            description: "この機能は現在開発中です。",
-        });
-    }
+
+    const loadComments = async () => {
+        if (!showComments) {
+            setCommentsLoading(true);
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) return;
+
+                const response = await fetch(`/api/posts/${post.id}/comments`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setComments(data.comments || []);
+                } else {
+                    console.error('Failed to load comments');
+                }
+            } catch (error) {
+                console.error('Error loading comments:', error);
+            } finally {
+                setCommentsLoading(false);
+            }
+        }
+        setShowComments(!showComments);
+    };
+
+    const handleSubmitComment = async () => {
+        if (!newComment.trim()) return;
+
+        setSubmittingComment(true);
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                throw new Error('Not authenticated');
+            }
+
+            const response = await fetch(`/api/posts/${post.id}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: newComment.trim() }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setComments([...comments, data.comment]);
+                setNewComment('');
+                post.comments = data.commentsCount; // Update parent post's comment count
+                toast({
+                    title: 'コメントを投稿しました',
+                });
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to post comment');
+            }
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            toast({
+                variant: 'destructive',
+                title: 'コメントエラー',
+                description: 'コメントの投稿中にエラーが発生しました。',
+            });
+        } finally {
+            setSubmittingComment(false);
+        }
+    };
+
+    const handleShare = async (platform: string = 'copy') => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                toast({
+                    variant: 'destructive',
+                    title: '認証エラー',
+                    description: 'ログインしてください。',
+                });
+                return;
+            }
+
+            const response = await fetch(`/api/posts/${post.id}/share`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ platform }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setShareUrls(data.shareUrls);
+                
+                if (platform === 'copy') {
+                    await navigator.clipboard.writeText(data.postUrl);
+                    toast({
+                        title: 'リンクをコピーしました',
+                        description: '投稿リンクがクリップボードにコピーされました。',
+                    });
+                } else {
+                    // Open share URL in new window
+                    window.open(data.shareUrls[platform], '_blank', 'width=600,height=400');
+                }
+                
+                setShowShareOptions(false);
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to share post');
+            }
+        } catch (error) {
+            console.error('Error sharing post:', error);
+            toast({
+                variant: 'destructive',
+                title: '共有エラー',
+                description: '投稿の共有中にエラーが発生しました。',
+            });
+        }
+    };
 
     return (
         <Card>
@@ -402,18 +663,116 @@ const PostCard = ({ post }: { post: any }) => {
                         <Heart className={isLiked ? "mr-2 text-red-500 fill-current" : "mr-2"} />
                         いいね
                     </Button>
-                    <Button variant="ghost" className="text-muted-foreground" onClick={showComingSoon}><MessageCircle className="mr-2" />コメント</Button>
-                    <Button variant="ghost" className="text-muted-foreground" onClick={showComingSoon}><Send className="mr-2" />シェア</Button>
+                    <Button variant="ghost" className="text-muted-foreground" onClick={loadComments}>
+                        <MessageCircle className="mr-2" />コメント
+                    </Button>
+                    
+                    {/* Share Button with Dropdown */}
+                    <div className="relative">
+                        <Button 
+                            variant="ghost" 
+                            className="text-muted-foreground" 
+                            onClick={() => setShowShareOptions(!showShareOptions)}
+                        >
+                            <Send className="mr-2" />シェア
+                        </Button>
+                        
+                        {showShareOptions && (
+                            <div className="absolute bottom-full mb-2 left-0 bg-white border rounded-lg shadow-lg p-2 min-w-40 z-10">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start text-sm"
+                                    onClick={() => handleShare('copy')}
+                                >
+                                    リンクをコピー
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start text-sm"
+                                    onClick={() => handleShare('twitter')}
+                                >
+                                    Twitterでシェア
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start text-sm"
+                                    onClick={() => handleShare('facebook')}
+                                >
+                                    Facebookでシェア
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                    
                     <TipButton 
                         recipientId={post.author.username} 
                         recipientName={post.author.name}
+                        postId={post.id.toString()}
                         className="text-muted-foreground"
                     />
-                    <Button variant="ghost" className="text-muted-foreground" onClick={handleSave}>
-                        <Bookmark className={isSaved ? "mr-2 text-primary fill-current" : "mr-2"} />
+                    <Button variant="ghost" className="text-muted-foreground" onClick={handleBookmark}>
+                        <Bookmark className={isBookmarked ? "mr-2 text-primary fill-current" : "mr-2"} />
                         保存
                     </Button>
                 </div>
+                
+                {/* Comments Section */}
+                {showComments && (
+                    <div className="w-full border-t pt-4 mt-4">
+                        <div className="space-y-4">
+                            {/* Comment Input */}
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="コメントを追加..."
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmitComment()}
+                                    className="flex-grow"
+                                />
+                                <Button 
+                                    onClick={handleSubmitComment} 
+                                    disabled={!newComment.trim() || submittingComment}
+                                    size="sm"
+                                >
+                                    {submittingComment ? '投稿中...' : '投稿'}
+                                </Button>
+                            </div>
+                            
+                            {/* Comments List */}
+                            {commentsLoading ? (
+                                <div className="flex items-center justify-center py-4">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                    <span className="ml-2 text-sm text-muted-foreground">読み込み中...</span>
+                                </div>
+                            ) : comments.length > 0 ? (
+                                <div className="space-y-3 max-h-60 overflow-y-auto">
+                                    {comments.map((comment) => (
+                                        <div key={comment.id} className="flex gap-3 p-2 rounded-lg bg-muted/50">
+                                            <Avatar className="h-8 w-8 flex-shrink-0">
+                                                <AvatarImage src={comment.author.avatarUrl} alt={comment.author.name} />
+                                                <AvatarFallback>{comment.author.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="font-semibold text-sm">{comment.author.name}</span>
+                                                    <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
+                                                </div>
+                                                <p className="text-sm break-words">{comment.content}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-4 text-sm text-muted-foreground">
+                                    まだコメントがありません。最初のコメントを投稿しましょう！
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </CardFooter>
         </Card>
     );

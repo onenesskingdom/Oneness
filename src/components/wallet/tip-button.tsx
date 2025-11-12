@@ -18,10 +18,11 @@ import { useAuth } from '@/hooks/use-auth';
 interface TipButtonProps {
   recipientId: string;
   recipientName: string;
+  postId: string;
   className?: string;
 }
 
-export function TipButton({ recipientId, recipientName, className }: TipButtonProps) {
+export function TipButton({ recipientId, recipientName, postId, className }: TipButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -62,17 +63,41 @@ export function TipButton({ recipientId, recipientName, className }: TipButtonPr
 
     setIsSending(true);
     try {
-      // Mock tip sending - in production, this would call the real API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'チップを送信しました！',
-        description: `${recipientName}さんに${formatWKP(tipAmount)}を送信しました。`
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`/api/posts/${postId}/tip`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          amount: tipAmount,
+          recipientId: recipientId 
+        }),
       });
-      
-      setIsOpen(false);
-      setAmount('');
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: 'チップを送信しました！',
+          description: `${recipientName}さんに${formatWKP(tipAmount)}を送信しました。`
+        });
+        
+        setIsOpen(false);
+        setAmount('');
+        
+        // Optionally refresh user data to update balance
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send tip');
+      }
     } catch (error) {
+      console.error('Tip sending error:', error);
       toast({
         variant: 'destructive',
         title: '送信エラー',
