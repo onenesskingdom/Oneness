@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI, Modality } from '@google/genai';
 
 interface VoiceMessage {
   id: string;
@@ -24,12 +24,13 @@ export function useGeminiLive() {
     error: null,
   });
   
+  const sessionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const genAIRef = useRef<GoogleGenerativeAI | null>(null);
-  const modelRef = useRef<any>(null);
+  const genAIRef = useRef<GoogleGenAI | null>(null);
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const responseQueueRef = useRef<any[]>([]);
 
   const connect = useCallback(async () => {
     if (!apiKey) {
@@ -40,13 +41,59 @@ export function useGeminiLive() {
     try {
       setConnectionState(prev => ({ ...prev, error: null }));
       
-      genAIRef.current = new GoogleGenerativeAI(apiKey);
-      modelRef.current = genAIRef.current.getGenerativeModel({ model: 'gemini-1.5-pro' });
+      genAIRef.current = new GoogleGenAI({ apiKey });
       
-      setConnectionState(prev => ({ ...prev, isConnected: true }));
-      
+      const config = {
+        responseModalities: [Modality.AUDIO, Modality.TEXT],
+        systemInstruction: "あなたは役立つアシスタントで、親切な口調で答えてください。"
+      };
+
+      sessionRef.current = await genAIRef.current.live.connect({
+        model: "gemini-2.0-flash-exp",
+        config: config,
+        callbacks: {
+          onopen: () => {
+            console.log('Gemini Live session opened');
+            setConnectionState(prev => ({ ...prev, isConnected: true }));
+          },
+          onmessage: (message: any) => {
+            console.log('Received message:', message);
+            responseQueueRef.current.push(message);
+            
+            if (message.serverContent && message.serverContent.modelTurn) {
+              const modelTurn = message.serverContent.modelTurn;
+              
+              if (modelTurn.parts) {
+                for (const part of modelTurn.parts) {
+                  if (part.text) {
+                    addMessage(part.text, false);
+                  }
+                  
+                  if (part.inlineData && part.inlineData.data) {
+                    // Play audio response
+                    playAudioResponse(part.inlineData.data);
+                  }
+                }
+              }
+            }
+          },
+          onerror: (error: any) => {
+            console.error('Gemini Live session error:', error);
+            setConnectionState(prev => ({ 
+              ...prev, 
+              error: error.message || 'Connection error',
+              isConnected: false 
+            }));
+          },
+          onclose: () => {
+            console.log('Gemini Live session closed');
+            setConnectionState(prev => ({ ...prev, isConnected: false }));
+          },
+        },
+      });
+
     } catch (error: any) {
-      console.error('Failed to initialize Gemini:', error);
+      console.error('Failed to connect to Gemini Live:', error);
       setConnectionState(prev => ({ 
         ...prev, 
         error: error.message || 'Failed to connect',
@@ -56,6 +103,11 @@ export function useGeminiLive() {
   }, [apiKey]);
 
   const disconnect = useCallback(() => {
+    if (sessionRef.current) {
+      sessionRef.current.close();
+      sessionRef.current = null;
+    }
+    
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current = null;
@@ -67,7 +119,7 @@ export function useGeminiLive() {
     }
     
     genAIRef.current = null;
-    modelRef.current = null;
+    responseQueueRef.current = [];
     
     setConnectionState({
       isConnected: false,
@@ -77,18 +129,22 @@ export function useGeminiLive() {
     });
   }, []);
 
-  const transcribeAudio = useCallback(async (audioBlob: Blob): Promise<string> => {
-    // For now, return a placeholder since we don't have a speech-to-text service
-    // In a real implementation, you would use Web Speech API or a service like Google Speech-to-Text
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve("音声入力を受け付けました"); // Placeholder text
-      }, 1000);
+  const convertAudioToBase64 = useCallback(async (audioBlob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix to get base64
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(audioBlob);
     });
   }, []);
 
   const startListening = useCallback(async () => {
-    if (!modelRef.current || !connectionState.isConnected) {
+    if (!sessionRef.current || !connectionState.isConnected) {
       setConnectionState(prev => ({ ...prev, error: 'Not connected to Gemini' }));
       return;
     }
@@ -111,45 +167,26 @@ export function useGeminiLive() {
       const audioChunks: Blob[] = [];
 
       mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
+        if (event.data.size > 0 && sessionRef.current) {
           audioChunks.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        if (audioChunks.length > 0) {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
           
+          // Convert audio chunk to base64 and send to Gemini
           try {
-            // Transcribe audio (placeholder)
-            const transcribedText = await transcribeAudio(audioBlob);
-            addMessage(transcribedText, true);
+            const base64Audio = await convertAudioToBase64(event.data);
             
-            // Get response from Gemini
-            const result = await modelRef.current.generateContent(transcribedText);
-            const response = await result.response;
-            const responseText = response.text();
-            
-            addMessage(responseText, false);
-            
-            // In a real implementation, you would convert the response text to speech
-            // For now, we'll just mark as speaking briefly
-            setConnectionState(prev => ({ ...prev, isSpeaking: true }));
-            setTimeout(() => {
-              setConnectionState(prev => ({ ...prev, isSpeaking: false }));
-            }, 2000);
-            
+            sessionRef.current.sendRealtimeInput({
+              audio: {
+                data: base64Audio,
+                mimeType: "audio/pcm;rate=16000"
+              }
+            });
           } catch (error) {
-            console.error('Error processing audio:', error);
-            setConnectionState(prev => ({ 
-              ...prev, 
-              error: 'Failed to process audio' 
-            }));
+            console.error('Error sending audio to Gemini:', error);
           }
         }
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000); // Send audio chunks every second
       setConnectionState(prev => ({ ...prev, isListening: true }));
       
     } catch (error: any) {
@@ -160,14 +197,41 @@ export function useGeminiLive() {
         isListening: false 
       }));
     }
-  }, [connectionState.isConnected, transcribeAudio]);
+  }, [connectionState.isConnected, convertAudioToBase64]);
 
   const stopListening = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
     }
     
     setConnectionState(prev => ({ ...prev, isListening: false }));
+  }, []);
+
+  const playAudioResponse = useCallback(async (base64Audio: string) => {
+    try {
+      setConnectionState(prev => ({ ...prev, isSpeaking: true }));
+      
+      const audioBytes = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0));
+      const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      audio.onended = () => {
+        setConnectionState(prev => ({ ...prev, isSpeaking: false }));
+        URL.revokeObjectURL(audioUrl);
+      };
+      
+      await audio.play();
+    } catch (error) {
+      console.error('Failed to play audio:', error);
+      setConnectionState(prev => ({ ...prev, isSpeaking: false }));
+    }
   }, []);
 
   const addMessage = useCallback((text: string, isUser: boolean) => {
