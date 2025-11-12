@@ -146,3 +146,111 @@ CREATE POLICY "Users can insert own notifications" ON user_notifications FOR INS
 CREATE POLICY "Users can view own avatar state" ON ai_avatar_state FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own avatar state" ON ai_avatar_state FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own avatar state" ON ai_avatar_state FOR UPDATE USING (auth.uid() = user_id);
+
+-- Social Media Tables
+CREATE TABLE IF NOT EXISTS posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT,
+  image_url TEXT,
+  image_hint TEXT,
+  video_url TEXT,
+  likes INT DEFAULT 0,
+  comments INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS post_likes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_likes_user ON post_likes(user_id);
+
+CREATE TABLE IF NOT EXISTS post_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_comments_post ON post_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_created_at ON post_comments(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS user_bookmarks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_bookmarks_post ON user_bookmarks(post_id);
+CREATE INDEX IF NOT EXISTS idx_user_bookmarks_user ON user_bookmarks(user_id);
+
+CREATE TABLE IF NOT EXISTS post_shares (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_shares_post ON post_shares(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_shares_user ON post_shares(user_id);
+
+CREATE TABLE IF NOT EXISTS tip_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  recipient_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  amount INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_tip_transactions_sender ON tip_transactions(sender_id);
+CREATE INDEX IF NOT EXISTS idx_tip_transactions_recipient ON tip_transactions(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_tip_transactions_post ON tip_transactions(post_id);
+
+-- Add banner_url to user_profiles if it doesn't exist
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS banner_url TEXT;
+
+-- Enable Row Level Security for new tables
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_shares ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tip_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for social media tables
+CREATE POLICY "Posts are viewable by everyone" ON posts FOR SELECT USING (true);
+CREATE POLICY "Users can insert own posts" ON posts FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own posts" ON posts FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own posts" ON posts FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Post likes are viewable by everyone" ON post_likes FOR SELECT USING (true);
+CREATE POLICY "Users can manage own likes" ON post_likes FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Post comments are viewable by everyone" ON post_comments FOR SELECT USING (true);
+CREATE POLICY "Users can insert own comments" ON post_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own comments" ON post_comments FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own comments" ON post_comments FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "User bookmarks are viewable by owner" ON user_bookmarks FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own bookmarks" ON user_bookmarks FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Post shares are viewable by everyone" ON post_shares FOR SELECT USING (true);
+CREATE POLICY "Users can insert own shares" ON post_shares FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Tip transactions are viewable by participants" ON tip_transactions FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = recipient_id);
+CREATE POLICY "Users can insert own tips as sender" ON tip_transactions FOR INSERT WITH CHECK (auth.uid() = sender_id);
