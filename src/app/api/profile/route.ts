@@ -10,10 +10,8 @@ export async function GET(request: NextRequest) {
   try {
     // Get the user from the session using Supabase auth
     const authHeader = request.headers.get('authorization');
-    console.log('Auth header:', authHeader ? 'Present' : 'Missing');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No Bearer token found');
       return NextResponse.json(
         { error: 'Unauthorized - No Bearer token' },
         { status: 401 }
@@ -21,7 +19,6 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.split(' ')[1];
-    console.log('Token length:', token.length);
     
     // Create a Supabase client with the user's JWT token
     const userSupabase = createClient(
@@ -40,7 +37,6 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await userSupabase.auth.getUser();
 
     if (authError) {
-      console.log('Auth error:', authError.message);
       return NextResponse.json(
         { error: 'Invalid token - ' + authError.message },
         { status: 401 }
@@ -48,7 +44,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (!user) {
-      console.log('No user found');
       return NextResponse.json(
         { error: 'Invalid token - No user' },
         { status: 401 }
