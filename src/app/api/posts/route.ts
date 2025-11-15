@@ -56,14 +56,7 @@ export async function GET(request: NextRequest) {
     console.log('GET /api/posts - Fetching posts from database...');
     const { data: posts, error: postsError } = await postsClient
       .from('posts')
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -77,6 +70,27 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('GET /api/posts - Posts fetched:', posts?.length || 0, 'posts');
+
+    // Fetch user profiles for the post authors
+    let userProfiles: { [key: string]: any } = {};
+    if (posts && posts.length > 0) {
+      const userIds = [...new Set(posts.map((post: any) => post.user_id))];
+      console.log('GET /api/posts - Fetching profiles for user IDs:', userIds);
+      const { data: profiles, error: profilesError } = await postsClient
+        .from('user_profiles')
+        .select('*')
+        .in('user_id', userIds);
+
+      if (profilesError) {
+        console.error('GET /api/posts - Profiles fetch error:', profilesError);
+      } else {
+        userProfiles = profiles?.reduce((acc: any, profile: any) => {
+          acc[profile.user_id] = profile;
+          return acc;
+        }, {}) || {};
+        console.log('GET /api/posts - Profiles fetched for users:', Object.keys(userProfiles));
+      }
+    }
 
     // Get user's likes for these posts
     const postIds = posts?.map((post: any) => post.id) || [];
@@ -116,23 +130,26 @@ export async function GET(request: NextRequest) {
     }
 
     // Format posts for frontend
-    const formattedPosts = posts?.map((post: any) => ({
-      id: post.id,
-      content: post.content,
-      imageUrl: post.image_url,
-      imageHint: post.image_hint,
-      videoUrl: post.video_url,
-      likes: post.likes || 0,
-      comments: post.comments || 0,
-      timestamp: new Date(post.created_at).toLocaleString('ja-JP'),
-      isLiked: likedPostIds.has(post.id),
-      isBookmarked: bookmarkedPostIds.has(post.id),
-      author: {
-        name: post.user_profiles?.display_name || 'Unknown User',
-        username: post.user_id,
-        avatarUrl: post.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
-      }
-    })) || [];
+    const formattedPosts = posts?.map((post: any) => {
+      const profile = userProfiles[post.user_id];
+      return {
+        id: post.id,
+        content: post.content,
+        imageUrl: post.image_url,
+        imageHint: post.image_hint,
+        videoUrl: post.video_url,
+        likes: post.likes || 0,
+        comments: post.comments || 0,
+        timestamp: new Date(post.created_at).toLocaleString('ja-JP'),
+        isLiked: likedPostIds.has(post.id),
+        isBookmarked: bookmarkedPostIds.has(post.id),
+        author: {
+          name: profile?.display_name || 'Unknown User',
+          username: post.user_id,
+          avatarUrl: profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+        }
+      };
+    }) || [];
 
     console.log('GET /api/posts - Formatted posts count:', formattedPosts.length);
 
