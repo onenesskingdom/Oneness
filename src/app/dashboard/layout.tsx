@@ -184,20 +184,29 @@ const RightSidebar = () => {
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+    const { isLoggedIn, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        // Check if we're running on the client side
-        if (typeof window !== 'undefined') {
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const authToken = localStorage.getItem('auth_token');
-            
-            // If not logged in or missing auth token, redirect to login
-            if (!isLoggedIn || !authToken) {
-                router.replace('/login');
-            }
+        // If not loading and not logged in, redirect to login
+        if (!loading && !isLoggedIn) {
+            router.replace('/login');
         }
-    }, [router]);
+    }, [isLoggedIn, loading, router]);
+
+    // Show loading spinner while checking auth
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <LoadingSpinner className="h-8 w-8" />
+            </div>
+        );
+    }
+
+    // If not logged in, don't render anything (redirect will happen)
+    if (!isLoggedIn) {
+        return null;
+    }
 
     return (
         <div className="bg-background text-foreground min-h-screen">

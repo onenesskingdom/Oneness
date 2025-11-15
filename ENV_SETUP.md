@@ -16,10 +16,8 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 # Site URL for redirects
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
-# Neo4j Configuration (optional, when using Neo4j)
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=jon&jamesr1
+# OAuth Configuration (for Google and Apple login)
+# Configure these in your Supabase dashboard under Authentication → Providers
 
 ```
 
@@ -30,6 +28,30 @@ NEO4J_PASSWORD=jon&jamesr1
 3. Copy the Project URL (NEXT_PUBLIC_SUPABASE_URL)
 4. Copy the anon public key (NEXT_PUBLIC_SUPABASE_ANON_KEY)
 5. Copy the service_role key (SUPABASE_SERVICE_ROLE_KEY) - keep this secret!
+
+## OAuth Provider Setup
+
+### Google OAuth
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable the Google+ API
+4. Go to Credentials → Create OAuth 2.0 Client ID
+5. Set authorized redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+6. Copy the Client ID and Client Secret
+
+### Apple OAuth
+1. Go to [Apple Developer](https://developer.apple.com/)
+2. Create an App ID with Sign In with Apple capability
+3. Create a Services ID for Sign In with Apple
+4. Configure the Services ID with your domain
+5. Generate a private key
+6. Copy the Services ID, Team ID, Private Key, and Key ID
+
+### Configure in Supabase
+1. Go to Authentication → Providers in your Supabase dashboard
+2. Enable Google provider and enter Client ID/Secret
+3. Enable Apple provider and enter Team ID, Services ID, Private Key, and Key ID
+4. Set redirect URLs to match your site URL
 
 ## Production deployment
 

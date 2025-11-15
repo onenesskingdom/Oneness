@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,12 +20,13 @@ export async function POST(request: NextRequest) {
     const { email, password, displayName } = registerSchema.parse(body);
 
     // Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      email_confirm: true,
-      user_metadata: {
-        display_name: displayName
+      options: {
+        data: {
+          display_name: displayName
+        }
       }
     });
 
@@ -106,8 +108,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Automatically sign in the user after successful registration
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (signInError) {
+      console.error('Register: Auto sign-in error:', signInError);
+      // Don't fail registration, but log the error
+      return NextResponse.json({
+        message: 'User registered successfully, but automatic sign-in failed. Please log in manually.',
+        user: {
+          id: authData.user.id,
+          email: authData.user.email,
+          displayName
+        },
+        autoSignInFailed: true
+      });
+    }
+
+    if (!signInData.session) {
+      console.error('Register: No session after auto sign-in');
+      return NextResponse.json({
+        message: 'User registered successfully, but automatic sign-in failed. Please log in manually.',
+        user: {
+          id: authData.user.id,
+          email: authData.user.email,
+          displayName
+        },
+        autoSignInFailed: true
+      });
+    }
+
+    // Set HTTP-only cookies for the session
+    const cookieStore = await cookies();
+    cookieStore.set('access_token', signInData.session.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600 // 1 hour
+    });
+    cookieStore.set('refresh_token', signInData.session.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 3600 // 30 days
+    });
+
     return NextResponse.json({
-      message: 'User registered successfully',
+      message: 'User registered and signed in successfully',
       user: {
         id: authData.user.id,
         email: authData.user.email,
