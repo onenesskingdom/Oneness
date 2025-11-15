@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
       if (profilesError) {
         console.error('GET /api/posts - Profiles fetch error:', profilesError);
       } else {
+        console.log('GET /api/posts - Raw profiles data:', profiles);
         userProfiles = profiles?.reduce((acc: any, profile: any) => {
           acc[profile.user_id] = profile;
           return acc;
