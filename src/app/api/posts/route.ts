@@ -67,6 +67,9 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
+    console.log('GET /api/posts - Raw posts data:', posts);
+    console.log('GET /api/posts - Posts error:', postsError);
+
     if (postsError) {
       console.error('GET /api/posts - Posts fetch error:', postsError);
       // Return empty array for missing table or any other fetch issue
