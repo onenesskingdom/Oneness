@@ -86,7 +86,7 @@ export default function CreateAdForm({ onSuccess, editData }: CreateAdFormProps)
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('supabase_token');
+      const token = localStorage.getItem('auth_token');
       if (!token) {
         toast({
           variant: "destructive",

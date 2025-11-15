@@ -79,7 +79,7 @@ export default function MarketplacePage() {
 
   const fetchAds = async () => {
     try {
-      const token = localStorage.getItem('supabase_token');
+      const token = localStorage.getItem('auth_token');
       const headers: Record<string, string> = {};
 
       if (token) {
@@ -114,7 +114,7 @@ export default function MarketplacePage() {
 
   const handleLike = async (adId: number) => {
     try {
-      const token = localStorage.getItem('supabase_token');
+      const token = localStorage.getItem('auth_token');
       if (!token) {
         toast({
           variant: "destructive",
