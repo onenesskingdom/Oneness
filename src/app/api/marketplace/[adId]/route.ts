@@ -24,17 +24,10 @@ export async function GET(
     // TODO: Increment view count - requires proper implementation
     // await supabase.rpc('increment_ad_views', { ad_id: adId });
 
-    // Get ad details
+    // Get ad with basic info (no join to avoid foreign key issues)
     const { data: ad, error: adError } = await supabase
       .from('marketplace_ads')
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select('*')
       .eq('id', adId)
       .single();
 
@@ -46,30 +39,33 @@ export async function GET(
     // Get comments
     const { data: comments, error: commentsError } = await supabase
       .from('marketplace_ad_comments')
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select('*')
       .eq('ad_id', adId)
       .order('created_at', { ascending: true });
 
     // Get offers
     const { data: offers, error: offersError } = await supabase
       .from('marketplace_offers')
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select('*')
       .eq('ad_id', adId)
       .order('created_at', { ascending: false });
+
+    // Get all user IDs involved
+    const userIds = new Set<string>();
+    userIds.add(ad.user_id);
+    comments?.forEach((comment: any) => userIds.add(comment.user_id));
+    offers?.forEach((offer: any) => userIds.add(offer.user_id));
+
+    // Get user profiles for all involved users
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, display_name, avatar_url')
+      .in('user_id', Array.from(userIds));
+
+    const userProfiles: { [key: string]: any } = {};
+    profiles?.forEach((profile: any) => {
+      userProfiles[profile.user_id] = profile;
+    });
 
     // Check if user liked this ad
     let isLiked = false;
@@ -99,8 +95,8 @@ export async function GET(
       created_at: ad.created_at,
       seller: {
         id: ad.user_id,
-        name: ad.user_profiles?.display_name || 'Unknown Seller',
-        avatar: ad.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+        name: userProfiles[ad.user_id]?.display_name || 'Unknown Seller',
+        avatar: userProfiles[ad.user_id]?.avatar_url || "https://picsum.photos/seed/user1/100/100"
       },
       isLiked,
       comments: comments?.map((comment: any) => ({
@@ -109,8 +105,8 @@ export async function GET(
         created_at: comment.created_at,
         author: {
           id: comment.user_id,
-          name: comment.user_profiles?.display_name || 'Unknown User',
-          avatar: comment.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+          name: userProfiles[comment.user_id]?.display_name || 'Unknown User',
+          avatar: userProfiles[comment.user_id]?.avatar_url || "https://picsum.photos/seed/user1/100/100"
         }
       })) || [],
       offers: offers?.map((offer: any) => ({
@@ -121,8 +117,8 @@ export async function GET(
         created_at: offer.created_at,
         buyer: {
           id: offer.user_id,
-          name: offer.user_profiles?.display_name || 'Unknown User',
-          avatar: offer.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+          name: userProfiles[offer.user_id]?.display_name || 'Unknown User',
+          avatar: userProfiles[offer.user_id]?.avatar_url || "https://picsum.photos/seed/user1/100/100"
         }
       })) || []
     };

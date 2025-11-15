@@ -23,17 +23,10 @@ export async function GET(request: NextRequest) {
       user = authUser;
     }
 
-    // Build query
+    // Get ads with basic info (no join to avoid foreign key issues)
     let query = supabase
       .from('marketplace_ads')
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -63,6 +56,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch ads' }, { status: 500 });
     }
 
+    // Get user profiles for these ads
+    let userProfiles: { [key: string]: any } = {};
+    if (ads && ads.length > 0) {
+      const userIds = [...new Set(ads.map((ad: any) => ad.user_id))];
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      userProfiles = profiles?.reduce((acc: any, profile: any) => {
+        acc[profile.user_id] = profile;
+        return acc;
+      }, {}) || {};
+    }
+
     // Get likes for authenticated user
     let likedAdIds = new Set<number>();
     if (user && ads && ads.length > 0) {
@@ -77,27 +85,30 @@ export async function GET(request: NextRequest) {
     }
 
     // Format ads
-    const formattedAds = ads?.map((ad: any) => ({
-      id: ad.id,
-      title: ad.title,
-      description: ad.description,
-      price: ad.price,
-      image_url: ad.image_url,
-      category: ad.category,
-      condition: ad.condition,
-      location: ad.location,
-      status: ad.status,
-      views: ad.views || 0,
-      likes: ad.likes || 0,
-      commentsCount: ad.comments || 0,
-      created_at: ad.created_at,
-      seller: {
-        id: ad.user_id,
-        name: ad.user_profiles?.display_name || 'Unknown Seller',
-        avatar: ad.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
-      },
-      isLiked: likedAdIds.has(ad.id)
-    })) || [];
+    const formattedAds = ads?.map((ad: any) => {
+      const profile = userProfiles[ad.user_id];
+      return {
+        id: ad.id,
+        title: ad.title,
+        description: ad.description,
+        price: ad.price,
+        image_url: ad.image_url,
+        category: ad.category,
+        condition: ad.condition,
+        location: ad.location,
+        status: ad.status,
+        views: ad.views || 0,
+        likes: ad.likes || 0,
+        commentsCount: ad.comments || 0,
+        created_at: ad.created_at,
+        seller: {
+          id: ad.user_id,
+          name: profile?.display_name || 'Unknown Seller',
+          avatar: profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+        },
+        isLiked: likedAdIds.has(ad.id)
+      };
+    }) || [];
 
     return NextResponse.json({ ads: formattedAds });
 

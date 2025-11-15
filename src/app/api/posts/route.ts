@@ -76,15 +76,17 @@ export async function GET(request: NextRequest) {
     if (posts && posts.length > 0) {
       const userIds = [...new Set(posts.map((post: any) => post.user_id))];
       console.log('GET /api/posts - Fetching profiles for user IDs:', userIds);
-      const { data: profiles, error: profilesError } = await postsClient
+      const { data: profiles, error: profilesError } = await supabase
         .from('user_profiles')
-        .select('*')
+        .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
+
+      console.log('GET /api/posts - Raw profiles data:', profiles);
+      console.log('GET /api/posts - Profiles error:', profilesError);
 
       if (profilesError) {
         console.error('GET /api/posts - Profiles fetch error:', profilesError);
       } else {
-        console.log('GET /api/posts - Raw profiles data:', profiles);
         userProfiles = profiles?.reduce((acc: any, profile: any) => {
           acc[profile.user_id] = profile;
           return acc;
