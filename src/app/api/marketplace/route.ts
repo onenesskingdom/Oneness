@@ -23,15 +23,13 @@ export async function GET(request: NextRequest) {
       user = authUser;
     }
 
-    // Get ads with basic info (no join to avoid foreign key issues)
+    // Build base query
     let query = supabase
       .from('marketplace_ads')
       .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .eq('status', 'active');
 
-    // Apply filters
+    // Apply filters first
     if (category && category !== 'すべて') {
       query = query.eq('category', category);
     }
@@ -47,7 +45,13 @@ export async function GET(request: NextRequest) {
       query = query.order('price', { ascending: false });
     } else if (sortBy === 'popular') {
       query = query.order('views', { ascending: false });
+    } else {
+      // Default: newest first
+      query = query.order('created_at', { ascending: false });
     }
+
+    // Apply pagination after sorting
+    query = query.range(offset, offset + limit - 1);
 
     const { data: ads, error: adsError } = await query;
 
@@ -56,32 +60,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch ads' }, { status: 500 });
     }
 
-    // Get user profiles for these ads
+    // Get user profiles and likes in parallel for better performance
     let userProfiles: { [key: string]: any } = {};
+    let likedAdIds = new Set<number>();
+
     if (ads && ads.length > 0) {
       const userIds = [...new Set(ads.map((ad: any) => ad.user_id))];
-      const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
+      const adIds = ads.map((ad: any) => ad.id);
 
-      userProfiles = profiles?.reduce((acc: any, profile: any) => {
+      // Run both queries in parallel
+      const [profilesResult, likesResult] = await Promise.all([
+        supabase
+          .from('user_profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds),
+        user ? supabase
+          .from('marketplace_ad_likes')
+          .select('ad_id')
+          .eq('user_id', user.id)
+          .in('ad_id', adIds) : Promise.resolve({ data: [] })
+      ]);
+
+      // Process profiles
+      userProfiles = profilesResult.data?.reduce((acc: any, profile: any) => {
         acc[profile.user_id] = profile;
         return acc;
       }, {}) || {};
-    }
 
-    // Get likes for authenticated user
-    let likedAdIds = new Set<number>();
-    if (user && ads && ads.length > 0) {
-      const adIds = ads.map((ad: any) => ad.id);
-      const { data: likes } = await supabase
-        .from('marketplace_ad_likes')
-        .select('ad_id')
-        .eq('user_id', user.id)
-        .in('ad_id', adIds);
-
-      likedAdIds = new Set(likes?.map((like: any) => like.ad_id) || []);
+      // Process likes
+      likedAdIds = new Set(likesResult.data?.map((like: any) => like.ad_id) || []);
     }
 
     // Format ads

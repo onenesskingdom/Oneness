@@ -21,9 +21,6 @@ export async function GET(
       user = authUser;
     }
 
-    // TODO: Increment view count - requires proper implementation
-    // await supabase.rpc('increment_ad_views', { ad_id: adId });
-
     // Get ad with basic info (no join to avoid foreign key issues)
     const { data: ad, error: adError } = await supabase
       .from('marketplace_ads')
@@ -35,6 +32,30 @@ export async function GET(
       console.error('Get ad error:', adError);
       return NextResponse.json({ error: 'Ad not found' }, { status: 404 });
     }
+
+    // Track the view (don't wait for it to avoid slowing down the response)
+    (async () => {
+      try {
+        await supabase
+          .from('marketplace_ad_views')
+          .insert({
+            ad_id: adId,
+            user_id: user?.id || null,
+            viewed_at: new Date().toISOString()
+          });
+
+        // Update the view counter
+        await supabase
+          .from('marketplace_ads')
+          .update({
+            views: (ad.views || 0) + 1
+          })
+          .eq('id', adId);
+      } catch (error: any) {
+        console.error('View tracking error:', error);
+        // Don't fail the request for tracking errors
+      }
+    })();
 
     // Get comments
     const { data: comments, error: commentsError } = await supabase
