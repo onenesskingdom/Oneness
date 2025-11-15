@@ -38,20 +38,28 @@ export async function GET(
 
     const { data: offers, error: offersError } = await supabase
       .from('marketplace_offers')
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select('*')
       .eq('ad_id', adId)
       .order('created_at', { ascending: false });
 
     if (offersError) {
       console.error('Get offers error:', offersError);
       return NextResponse.json({ error: 'Failed to fetch offers' }, { status: 500 });
+    }
+
+    // Get user profiles for offer buyers
+    let userProfiles: { [key: string]: any } = {};
+    if (offers && offers.length > 0) {
+      const userIds = [...new Set(offers.map((offer: any) => offer.user_id))];
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      userProfiles = profiles?.reduce((acc: any, profile: any) => {
+        acc[profile.user_id] = profile;
+        return acc;
+      }, {}) || {};
     }
 
     const formattedOffers = offers?.map((offer: any) => ({
@@ -62,8 +70,8 @@ export async function GET(
       created_at: offer.created_at,
       buyer: {
         id: offer.user_id,
-        name: offer.user_profiles?.display_name || 'Unknown User',
-        avatar: offer.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+        name: userProfiles[offer.user_id]?.display_name || 'Unknown User',
+        avatar: userProfiles[offer.user_id]?.avatar_url || "https://picsum.photos/seed/user1/100/100"
       }
     })) || [];
 

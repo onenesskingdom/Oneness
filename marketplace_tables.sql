@@ -1,5 +1,15 @@
--- Marketplace Tables SQL
+-- Marketplace Tables SQL Reset Script for Release Preparation
 -- Run this in your Supabase SQL editor
+-- This will drop all marketplace tables and recreate them empty
+
+-- Drop tables in reverse dependency order
+DROP TABLE IF EXISTS direct_messages CASCADE;
+DROP TABLE IF EXISTS marketplace_ad_clicks CASCADE;
+DROP TABLE IF EXISTS marketplace_ad_views CASCADE;
+DROP TABLE IF EXISTS marketplace_offers CASCADE;
+DROP TABLE IF EXISTS marketplace_ad_comments CASCADE;
+DROP TABLE IF EXISTS marketplace_ad_likes CASCADE;
+DROP TABLE IF EXISTS marketplace_ads CASCADE;
 
 -- Marketplace Ads table
 CREATE TABLE IF NOT EXISTS marketplace_ads (

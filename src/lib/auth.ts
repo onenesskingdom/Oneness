@@ -1,25 +1,24 @@
-// Authentication utility functions
+// Authentication utility functions using API calls and cookies for tokens, localStorage for user data only
 
-export const isAuthenticated = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  const authToken = localStorage.getItem('auth_token');
-  
-  return isLoggedIn && !!authToken;
+export const isAuthenticated = async (): Promise<boolean> => {
+  try {
+    const response = await fetch('/api/auth/me');
+    return response.ok;
+  } catch {
+    return false;
+  }
 };
 
-export const login = (authToken: string, refreshToken: string, user: any): void => {
-  localStorage.setItem('isLoggedIn', 'true');
-  localStorage.setItem('auth_token', authToken);
-  localStorage.setItem('refresh_token', refreshToken);
+export const login = (user: any): void => {
   localStorage.setItem('user', JSON.stringify(user));
 };
 
-export const logout = (): void => {
-  localStorage.removeItem('isLoggedIn');
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('refresh_token');
+export const logout = async (): Promise<void> => {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
   localStorage.removeItem('user');
 };
 

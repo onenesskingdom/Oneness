@@ -63,8 +63,8 @@ export default function LoginForm() {
           title: "Login successful",
           description: data.message,
         });
-        // Store session using auth utility
-        login(data.session.access_token, data.session.refresh_token, data.session.user);
+        // Store user data using auth utility
+        login(data.user);
         router.push('/dashboard');
       } else {
         toast({

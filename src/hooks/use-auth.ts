@@ -10,24 +10,34 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Check authentication status
-    const checkAuth = () => {
-      const authenticated = isAuthenticated();
-      const currentUser = getCurrentUser();
-      
-      setIsLoggedIn(authenticated);
-      setUser(currentUser);
-      setLoading(false);
+    const checkAuth = async () => {
+      try {
+        const authenticated = await isAuthenticated();
+        const currentUser = getCurrentUser();
+
+        setIsLoggedIn(authenticated);
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsLoggedIn(false);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     checkAuth();
-    
+
     // Listen for storage changes (in case another tab logs out)
     const handleStorageChange = () => {
+      const currentUser = getCurrentUser();
+      setUser(currentUser);
+      // For login status, we might need to re-check API
       checkAuth();
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };

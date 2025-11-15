@@ -2,19 +2,29 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Define which routes are protected
-const protectedRoutes = ['/dashboard', '/dashboard/profile', '/dashboard/settings'];
+const protectedRoutes = ['/dashboard'];
 const authRoutes = ['/login', '/register'];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Get the auth token from cookies (in a real app, you'd use cookies instead of localStorage)
-  // For this implementation, we'll check the localStorage via client-side code
-  // Middleware runs on the server, so we can't access localStorage directly
-  
-  // For demonstration purposes, we'll allow the request to proceed
-  // The actual authentication check will happen client-side
-  
+
+  // Check if the request has access token cookie
+  const accessToken = request.cookies.get('access_token');
+
+  const isAuthenticated = !!accessToken;
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
+
+  // If accessing protected route without authentication, redirect to login
+  if (isProtectedRoute && !isAuthenticated) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // If accessing auth routes while authenticated, redirect to dashboard
+  if (isAuthRoute && isAuthenticated) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
   return NextResponse.next();
 }
 

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,6 +37,21 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Set HTTP-only cookies for tokens
+    const cookieStore = await cookies();
+    cookieStore.set('access_token', data.session.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600 // 1 hour
+    });
+    cookieStore.set('refresh_token', data.session.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 3600 // 30 days
+    });
 
     // Get complete user data including profile and associated tables
     const [profile, pointsData, avatarState] = await Promise.all([
@@ -85,20 +101,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: 'Login successful',
-      session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_at: data.session.expires_at,
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-          profile: profile.data || null,
-          points: {
-            total: totalPoints,
-            history: pointsData.data || []
-          },
-          avatarState: avatarState.data?.state || null
-        }
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        profile: profile.data || null,
+        points: {
+          total: totalPoints,
+          history: pointsData.data || []
+        },
+        avatarState: avatarState.data?.state || null
       }
     });
   } catch (error) {

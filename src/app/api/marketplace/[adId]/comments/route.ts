@@ -15,14 +15,7 @@ export async function GET(
 
     const { data: comments, error: commentsError } = await supabase
       .from('marketplace_ad_comments')
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select('*')
       .eq('ad_id', adId)
       .order('created_at', { ascending: true });
 
@@ -31,14 +24,29 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });
     }
 
+    // Get user profiles for comment authors
+    let userProfiles: { [key: string]: any } = {};
+    if (comments && comments.length > 0) {
+      const userIds = [...new Set(comments.map((comment: any) => comment.user_id))];
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      userProfiles = profiles?.reduce((acc: any, profile: any) => {
+        acc[profile.user_id] = profile;
+        return acc;
+      }, {}) || {};
+    }
+
     const formattedComments = comments?.map((comment: any) => ({
       id: comment.id,
       content: comment.content,
       created_at: comment.created_at,
       author: {
         id: comment.user_id,
-        name: comment.user_profiles?.display_name || 'Unknown User',
-        avatar: comment.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+        name: userProfiles[comment.user_id]?.display_name || 'Unknown User',
+        avatar: userProfiles[comment.user_id]?.avatar_url || "https://picsum.photos/seed/user1/100/100"
       }
     })) || [];
 
@@ -83,20 +91,20 @@ export async function POST(
         user_id: user.id,
         content: content.trim()
       })
-      .select(`
-        *,
-        user_profiles (
-          display_name,
-          avatar_url,
-          user_id
-        )
-      `)
+      .select()
       .single();
 
     if (commentError) {
       console.error('Create comment error:', commentError);
       return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 });
     }
+
+    // Get user profile for the comment author
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('user_id, display_name, avatar_url')
+      .eq('user_id', user.id)
+      .single();
 
     // TODO: Increment comments count
     // await supabase
@@ -110,8 +118,8 @@ export async function POST(
       created_at: comment.created_at,
       author: {
         id: comment.user_id,
-        name: comment.user_profiles?.display_name || 'Unknown User',
-        avatar: comment.user_profiles?.avatar_url || "https://picsum.photos/seed/user1/100/100"
+        name: profile?.display_name || 'Unknown User',
+        avatar: profile?.avatar_url || "https://picsum.photos/seed/user1/100/100"
       }
     };
 
