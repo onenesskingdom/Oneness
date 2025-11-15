@@ -76,29 +76,65 @@ export default function ExchangeForm({ user, exchangeRates }: ExchangeFormProps)
             return;
         }
         const rate = exchangeRates[`op_to_${currency.toLowerCase()}` as keyof typeof exchangeRates];
-        setPayoutAmount(opAmount * rate);
+        const baseAmount = opAmount * rate;
+        const feeAmount = baseAmount * 0.05;
+        const finalAmount = baseAmount - feeAmount;
+        setPayoutAmount(finalAmount);
     };
 
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
 
-        // This is where the requestExchange cloud function would be called.
-        console.log("Exchange request:", values);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        toast({
-            title: "換金申請が送信されました",
-            description: `${values.op_amount} OPの換金申請が保留中です。`,
-        });
-        
-        setIsLoading(false);
-        form.reset();
-        setPayoutAmount(0);
+        try {
+            // Get current user (you'll need to get this from auth context)
+            const userResponse = await fetch('/api/auth/me'); // Assuming you have an auth endpoint
+            const userData = await userResponse.json();
+
+            const response = await fetch('/api/payments/create-exchange', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    op_amount: values.op_amount,
+                    target_currency: values.target_currency,
+                    user_id: userData.user.id,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to create exchange request');
+            }
+
+            toast({
+                title: "換金申請が送信されました",
+                description: `${values.op_amount} OPの換金申請が保留中です。管理者の承認をお待ちください。`,
+            });
+
+            // Refresh user data to show updated balance
+            window.location.reload();
+        } catch (error) {
+            toast({
+                title: "エラー",
+                description: error instanceof Error ? error.message : "換金申請に失敗しました。",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+            form.reset();
+            setPayoutAmount(0);
+        }
     }
     
-    const fee = form.watch('op_amount') * 0.05 || 0;
-    const totalDeducted = (form.watch('op_amount') || 0) + fee;
+    const opAmount = form.watch('op_amount') || 0;
+    const currency = form.watch('target_currency');
+    const basePayoutAmount = currency ? opAmount * exchangeRates[`op_to_${currency.toLowerCase()}` as keyof typeof exchangeRates] : 0;
+    const fee = basePayoutAmount * 0.05; // 5% fee deducted from payout
+    const finalPayoutAmount = basePayoutAmount - fee;
+    const totalDeducted = opAmount; // Only the OP amount is deducted from balance
 
     return (
         <Card>
@@ -166,8 +202,15 @@ export default function ExchangeForm({ user, exchangeRates }: ExchangeFormProps)
                         
                         <div className="space-y-2 text-sm border-t pt-4">
                             <div className="flex justify-between">
+                                <span className="text-muted-foreground">換金予定額:</span>
+                                <span>{basePayoutAmount.toLocaleString(undefined, { 
+                                    minimumFractionDigits: currency === 'BTC' ? 8 : 2,
+                                    maximumFractionDigits: currency === 'BTC' ? 8 : 2,
+                                })} {currency}</span>
+                            </div>
+                            <div className="flex justify-between">
                                 <span className="text-muted-foreground">手数料 (5%):</span>
-                                <span>{fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} OP</span>
+                                <span>-{fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</span>
                             </div>
                             <div className="flex justify-between font-semibold">
                                 <span className="text-muted-foreground">差し引かれるOP総額:</span>
@@ -176,10 +219,10 @@ export default function ExchangeForm({ user, exchangeRates }: ExchangeFormProps)
                              <div className="flex justify-between text-lg font-bold text-primary pt-2">
                                 <span>受取予定額:</span>
                                 <span>
-                                    {payoutAmount.toLocaleString(undefined, { 
-                                        minimumFractionDigits: form.watch('target_currency') === 'BTC' ? 8 : 2,
-                                        maximumFractionDigits: form.watch('target_currency') === 'BTC' ? 8 : 2,
-                                    })} {form.watch('target_currency')}
+                                    {finalPayoutAmount.toLocaleString(undefined, { 
+                                        minimumFractionDigits: currency === 'BTC' ? 8 : 2,
+                                        maximumFractionDigits: currency === 'BTC' ? 8 : 2,
+                                    })} {currency}
                                 </span>
                             </div>
                         </div>

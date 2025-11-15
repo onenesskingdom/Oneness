@@ -101,17 +101,20 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(50);
 
     if (!txError && exchangeTransactions) {
       const formattedExchangeTxs = exchangeTransactions.map(tx => ({
         id: tx.id,
         type: tx.type,
         date: new Date(tx.created_at),
-        op_amount: parseFloat(tx.from_amount),
-        currency: tx.to_currency,
-        amount: parseFloat(tx.to_amount),
-        status: tx.status
+        op_amount: tx.amount || tx.from_amount,
+        currency: tx.currency || tx.to_currency,
+        amount: tx.jpy_amount || tx.to_amount,
+        status: tx.status,
+        description: tx.description,
+        stripe_payment_intent_id: tx.stripe_payment_intent_id,
+        completed_at: tx.completed_at ? new Date(tx.completed_at) : null
       }));
       
       // Combine both sets of transactions

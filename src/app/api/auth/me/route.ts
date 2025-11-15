@@ -118,7 +118,11 @@ export async function GET(request: NextRequest) {
 }
 
 async function getUserData(supabaseClient: any, userId: string, email: string | undefined) {
-  const [profile, pointsData, avatarState] = await Promise.all([
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+
+  const [profile, pointsData, avatarState, monthlyRedemptions] = await Promise.all([
     supabaseClient
       .from('user_profiles')
       .select('*')
@@ -139,10 +143,21 @@ async function getUserData(supabaseClient: any, userId: string, email: string | 
       .select('state')
       .eq('user_id', userId)
       .single()
+      .then((result: any) => ({ data: result.data, error: result.error })),
+
+    // Calculate monthly redemptions
+    supabaseClient
+      .from('transactions')
+      .select('amount')
+      .eq('user_id', userId)
+      .eq('type', 'exchange')
+      .gte('created_at', startOfMonth.toISOString())
+      .lt('created_at', endOfMonth.toISOString())
       .then((result: any) => ({ data: result.data, error: result.error }))
   ]);
 
   const totalPoints = pointsData.data?.reduce((sum: number, entry: any) => sum + entry.amount, 0) || 0;
+  const monthlyRedeemedOp = monthlyRedemptions.data?.reduce((sum: number, tx: any) => sum + (tx.amount || 0), 0) || 0;
 
   return {
     id: userId,
@@ -150,7 +165,7 @@ async function getUserData(supabaseClient: any, userId: string, email: string | 
     profile: profile.data || null,
     points: {
       total: totalPoints,
-      history: pointsData.data || []
+      monthly_redeemed_op: monthlyRedeemedOp
     },
     avatarState: avatarState.data?.state || null
   };

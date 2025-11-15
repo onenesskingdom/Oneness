@@ -6,17 +6,29 @@ CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id),
   type VARCHAR(50) NOT NULL CHECK (type IN ('exchange', 'purchase', 'tip', 'donation')),
+  amount DECIMAL(20,8), -- OP amount for exchange/purchase
+  currency VARCHAR(20), -- Target currency for exchange (JPY, USDT, BTC)
+  jpy_amount DECIMAL(20,2), -- JPY equivalent for purchases
   from_currency VARCHAR(20) NOT NULL DEFAULT 'OP',
-  to_currency VARCHAR(20) NOT NULL,
-  from_amount DECIMAL(20,8) NOT NULL,
-  to_amount DECIMAL(20,8) NOT NULL,
+  to_currency VARCHAR(20),
+  from_amount DECIMAL(20,8),
+  to_amount DECIMAL(20,8),
   exchange_rate DECIMAL(20,8),
-  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'completed', 'rejected', 'cancelled')),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'pending_approval', 'approved', 'completed', 'failed', 'rejected', 'cancelled')),
   description TEXT,
+  stripe_payment_intent_id VARCHAR(255), -- Stripe payment intent ID
+  completed_at TIMESTAMP, -- When payment/exchange was completed
   metadata JSONB,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add missing columns to existing table (run this if table already exists)
+-- ALTER TABLE transactions ADD COLUMN IF NOT EXISTS amount DECIMAL(20,8);
+-- ALTER TABLE transactions ADD COLUMN IF NOT EXISTS currency VARCHAR(20);
+-- ALTER TABLE transactions ADD COLUMN IF NOT EXISTS jpy_amount DECIMAL(20,2);
+-- ALTER TABLE transactions ADD COLUMN IF NOT EXISTS stripe_payment_intent_id VARCHAR(255);
+-- ALTER TABLE transactions ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
 
 CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
@@ -40,9 +52,9 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger to automatically update updated_at
-CREATE TRIGGER update_transactions_updated_at 
-    BEFORE UPDATE ON transactions 
-    FOR EACH ROW 
+CREATE TRIGGER update_transactions_updated_at
+    BEFORE UPDATE ON transactions
+    FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample query to test the table structure

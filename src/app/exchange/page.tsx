@@ -32,13 +32,13 @@ export default function ExchangePage() {
     // Get user data from auth hook
     const userData = {
         op_balance: user?.points?.total || 0,
-        monthly_redeemed_op: 0, // This would need to be calculated from database
+        monthly_redeemed_op: user?.points?.monthly_redeemed_op || 0,
     }
     
     const exchangeRates = {
-        op_to_jpy: 1.5,
-        op_to_usdt: 0.01,
-        op_to_btc: 0.00000015
+        op_to_jpy: 100.0, // 1 OP = 100 JPY (matches purchase rate)
+        op_to_usdt: 1.0,  // 1 OP = 1 USDT
+        op_to_btc: 0.000015 // 1 OP = 0.000015 BTC
     }
 
     // Fetch user transactions

@@ -12,6 +12,13 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 NEXT_PUBLIC_SITE_URL=https://onenesskingdom.world
 ```
 
+### Stripe Configuration
+```bash
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_... # Replace with live keys for production
+STRIPE_SECRET_KEY=sk_live_... # Replace with live keys for production
+STRIPE_WEBHOOK_SECRET=whsec_... # From Stripe webhook endpoint
+```
+
 ### Optional: Neo4j Configuration (if using)
 ```bash
 NEO4J_URI=bolt://localhost:7687
@@ -20,6 +27,17 @@ NEO4J_PASSWORD=your-neo4j-password
 ```
 
 ## Hosting Provider Setup
+
+### VPS Deployment
+1. Ensure Node.js 18+ is installed on your VPS
+2. Install PM2 globally: `npm install -g pm2`
+3. Clone the repository to `/var/www/oneness`
+4. Copy `.env.production` with production environment variables
+5. Run `npm ci` to install dependencies
+6. Run `npm run build` to build the application
+7. Start with PM2: `pm2 start ecosystem.config.js`
+8. Set up Nginx reverse proxy (recommended)
+9. Configure SSL certificate with Let's Encrypt
 
 ### Vercel
 1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
@@ -35,6 +53,15 @@ NEO4J_PASSWORD=your-neo4j-password
 1. Create `.env` file with the variables above
 2. Restart the application
 3. Ensure the environment variables are loaded
+
+## Stripe Setup
+
+1. Create a Stripe account at https://stripe.com
+2. Get your API keys from the Stripe Dashboard → Developers → API Keys
+3. Set up webhook endpoint in Stripe Dashboard:
+   - URL: `https://yourdomain.com/api/payments/webhook`
+   - Events: `payment_intent.succeeded`, `payment_intent.payment_failed`
+4. Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
 
 ## Supabase Dashboard Configuration
 
@@ -57,13 +84,18 @@ After deployment:
 4. ✅ Test forgot password functionality
 5. ✅ Verify password reset emails are sent
 6. ✅ Check that reset links point to `https://onenesskingdom.world`
+7. ✅ Test WKP purchase flow with Stripe (use test card: 4242 4242 4242 4242)
+8. ✅ Test WKP exchange request submission
+9. ✅ Verify webhook processing (check Stripe dashboard for events)
 
 ## Common Issues
 
 - **Missing SUPABASE_SERVICE_ROLE_KEY**: Add the environment variable
 - **Wrong redirect URL**: Update Site URL in Supabase dashboard
 - **Emails not sending**: Configure SMTP settings in Supabase
+- **Stripe payments not working**: Check API keys and webhook configuration
 - **Build failures**: Check all environment variables are set
+- **PM2 not starting**: Check Node.js version and ecosystem.config.js
 
 ## Emergency Rollback
 
@@ -71,4 +103,5 @@ If anything goes wrong:
 1. Revert to previous deployment
 2. Check environment variable configuration
 3. Verify Supabase settings
-4. Test functionality before going live again
+4. Check Stripe webhook logs
+5. Test functionality before going live again
