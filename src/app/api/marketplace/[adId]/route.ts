@@ -95,7 +95,7 @@ export async function GET(
       status: ad.status,
       views: ad.views || 0,
       likes: ad.likes || 0,
-      comments: ad.comments || 0,
+      commentsCount: ad.comments || 0,
       created_at: ad.created_at,
       seller: {
         id: ad.user_id,

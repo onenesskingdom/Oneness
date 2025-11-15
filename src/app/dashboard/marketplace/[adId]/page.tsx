@@ -497,7 +497,7 @@ export default function AdDetailPage({ params }: AdDetailPageProps) {
               <div className="text-sm text-muted-foreground">いいね</div>
             </div>
             <div>
-              <div className="text-2xl font-bold">{ad.comments}</div>
+              <div className="text-2xl font-bold">{ad.commentsCount}</div>
               <div className="text-sm text-muted-foreground">コメント</div>
             </div>
           </div>

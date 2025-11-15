@@ -42,7 +42,7 @@ interface MarketplaceAd {
   status: string;
   views: number;
   likes: number;
-  comments: number;
+  commentsCount: number;
   created_at: string;
   seller: {
     id: string;
@@ -367,7 +367,7 @@ export default function MarketplacePage() {
                   </span>
                   <span className="flex items-center gap-1">
                     <MessageCircle className="h-4 w-4" />
-                    {ad.comments}
+                    {ad.commentsCount}
                   </span>
                   <span className="flex items-center gap-1">
                     <Star className="h-4 w-4" />
