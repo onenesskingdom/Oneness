@@ -291,3 +291,4 @@ export default function RegisterForm() {
 
   // Default fallback
   return null;
+}
