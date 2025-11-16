@@ -112,9 +112,6 @@ const KawaiiGenerator: React.FC<KawaiiGeneratorProps> = ({ onAvatarGenerated, on
     if (avatar.accessory !== 'none') {
       drawAccessory(ctx, avatar, centerX, centerY);
     }
-
-    // Generate data URL from canvas
-    setGeneratedImageUrl(canvas.toDataURL('image/png'));
   };
 
   const drawHair = (ctx: CanvasRenderingContext2D, avatar: KawaiiAvatar, centerX: number, centerY: number) => {

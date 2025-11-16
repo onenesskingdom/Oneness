@@ -86,6 +86,10 @@ export default function RegisterForm() {
     setCurrentStep(1);
   };
 
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    handleBasicInfoSubmit(values);
+  };
+
   const handleAvatarGenerated = (avatar: any, imageUrl: string) => {
     setAvatarData({ avatar, imageUrl });
     setCurrentStep(2);
@@ -190,7 +194,7 @@ export default function RegisterForm() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleBasicInfoSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="displayName"
