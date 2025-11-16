@@ -9,15 +9,32 @@ const supabase = createClient(
 );
 
 const registerSchema = z.object({
+  displayName: z.string().min(2).max(255),
   email: z.string().email(),
   password: z.string().min(6),
-  displayName: z.string().min(2).max(255)
+  profileData: z.object({
+    displayName: z.string().optional(),
+    bio: z.string().optional(),
+    interests: z.array(z.string()).optional(),
+    personality: z.array(z.string()).optional(),
+    goals: z.array(z.string()).optional(),
+    values: z.array(z.string()).optional(),
+    relationshipStatus: z.string().optional(),
+    occupation: z.string().optional(),
+    location: z.string().optional(),
+    favoriteQuote: z.string().optional(),
+    hobbies: z.array(z.string()).optional(),
+  }).optional(),
+  avatarData: z.object({
+    avatar: z.any(),
+    imageUrl: z.string(),
+  }).optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, displayName } = registerSchema.parse(body);
+    const { email, password, displayName, profileData, avatarData } = registerSchema.parse(body);
 
     // Create user in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -47,15 +64,30 @@ export async function POST(request: NextRequest) {
     // Create user profile and associated data
     try {
       console.log('Register: Creating user profile for user ID:', authData.user.id);
-      // Insert user profile
+      // Create user profile with all the collected data
+      console.log('Register: Creating user profile for user ID:', authData.user.id);
+      const profileDataToInsert = {
+        user_id: authData.user.id,
+        display_name: profileData?.displayName || displayName,
+        banner_url: '/default_banner.png',
+        bio: profileData?.bio || null,
+        location: profileData?.location || null,
+        occupation: profileData?.occupation || null,
+        relationship_status: profileData?.relationshipStatus || null,
+        favorite_quote: profileData?.favoriteQuote || null,
+        interests: profileData?.interests || [],
+        personality_traits: profileData?.personality || [],
+        goals: profileData?.goals || [],
+        values: profileData?.values || [],
+        hobbies: profileData?.hobbies || [],
+        avatar_url: avatarData?.imageUrl || null,
+        avatar_config: avatarData?.avatar || null,
+        rank: 'member'
+      };
+
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          user_id: authData.user.id,
-          display_name: displayName,
-          banner_url: '/default_banner.png',
-          rank: 'member'
-        });
+        .insert(profileDataToInsert);
 
       if (profileError) {
         console.error('Register: Profile creation error:', profileError);

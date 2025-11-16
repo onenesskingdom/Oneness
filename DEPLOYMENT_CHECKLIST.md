@@ -74,6 +74,53 @@ After fixing environment variables, configure Supabase:
 5. Email Settings → Set Sender name: `Oneness Kingdom`
 6. Email Settings → Set Reply-to: `onenesskingdom2@gmail.com`
 
+## Team Post Generator Setup
+
+The application includes an automated team post generator that creates inspirational content about peace, love, and harmony every 6 hours.
+
+### On Your VPS:
+
+```bash
+# Navigate to your project directory
+cd /var/www/oneness
+
+# Run the cron setup script
+./scripts/setup-team-post-cron.sh
+
+# Verify the cron job was installed
+crontab -l | grep "generate-team-post"
+
+# Check that the script is executable
+ls -la scripts/generate-team-post.js
+```
+
+### Expected Output:
+```
+# Oneness Kingdom Team Post Generator - Runs every 6 hours
+0 */6 * * * cd /var/www/oneness && /usr/bin/node /var/www/oneness/scripts/generate-team-post.js >> /var/www/oneness/logs/team-post-generator.log 2>&1
+```
+
+### Test the Script Manually:
+```bash
+# Test the team post generator
+node scripts/generate-team-post.js
+
+# Check the logs
+tail -f logs/team-post-generator.log
+```
+
+## User Profiles Migration
+
+The signup process now collects additional profile information. Run the database migration:
+
+```bash
+# Connect to your Supabase database and run:
+psql -h [your-db-host] -U postgres -d postgres -f enhanced-user-profiles-migration.sql
+
+# Or run via Supabase SQL editor:
+# Copy the contents of enhanced-user-profiles-migration.sql and execute
+```
+
 ## Verification Steps
 
 After deployment:
@@ -84,9 +131,11 @@ After deployment:
 4. ✅ Test forgot password functionality
 5. ✅ Verify password reset emails are sent
 6. ✅ Check that reset links point to `https://onenesskingdom.world`
-7. ✅ Test WKP purchase flow with Stripe (use test card: 4242 4242 4242 4242)
-8. ✅ Test WKP exchange request submission
-9. ✅ Verify webhook processing (check Stripe dashboard for events)
+7. ✅ Test Kawaii avatar generator and saving functionality
+8. ✅ Verify team post generation is working (check logs and posts table)
+9. ✅ Test WKP purchase flow with Stripe (use test card: 4242 4242 4242 4242)
+10. ✅ Test WKP exchange request submission
+11. ✅ Verify webhook processing (check Stripe dashboard for events)
 
 ## Common Issues
 

@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/lib/icons";
 import { BannerUpload } from "@/components/profile/banner-upload";
+import KawaiiGenerator from "@/components/KawaiiGenerator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface UserProfile {
     id: string;
@@ -34,6 +36,8 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [bannerUploading, setBannerUploading] = useState(false);
+    const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
+    const [avatarSaving, setAvatarSaving] = useState(false);
     const [formData, setFormData] = useState({
         display_name: '',
         bio: '',
@@ -202,6 +206,72 @@ export default function SettingsPage() {
         }
     };
 
+    const handleAvatarSave = async (avatarData: { avatar: any; imageUrl: string }) => {
+        setAvatarSaving(true);
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                throw new Error('Not authenticated');
+            }
+
+            // Convert data URL to blob
+            const response = await fetch(avatarData.imageUrl);
+            const blob = await response.blob();
+            const file = new File([blob], 'avatar.png', { type: 'image/png' });
+
+            // Create form data for upload
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('avatar_config', JSON.stringify(avatarData.avatar));
+
+            // Upload avatar
+            const uploadResponse = await fetch('/api/upload/avatar', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            if (uploadResponse.ok) {
+                const data = await uploadResponse.json();
+                toast({
+                    title: 'アバターを保存しました',
+                    description: '新しいアバターが正常に設定されました。'
+                });
+                
+                // Update local state
+                if (userProfile) {
+                    setUserProfile({
+                        ...userProfile,
+                        avatarUrl: data.avatarUrl,
+                        updated_at: new Date().toISOString()
+                    });
+                }
+
+                // Update form data
+                setFormData(prev => ({
+                    ...prev,
+                    avatar_url: data.avatarUrl
+                }));
+
+                setAvatarEditorOpen(false);
+            } else {
+                const errorData = await uploadResponse.json();
+                throw new Error(errorData.error || 'Failed to upload avatar');
+            }
+        } catch (error) {
+            console.error('Error saving avatar:', error);
+            toast({
+                variant: 'destructive',
+                title: '保存エラー',
+                description: error instanceof Error ? error.message : 'アバターの保存に失敗しました。'
+            });
+        } finally {
+            setAvatarSaving(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="container mx-auto max-w-4xl py-8">
@@ -260,7 +330,20 @@ export default function SettingsPage() {
                                     <AvatarImage src={userProfile.avatarUrl} />
                                     <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <Button variant="outline">画像を変更</Button>
+                                <Dialog open={avatarEditorOpen} onOpenChange={setAvatarEditorOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline">アバターを作成</Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                        <DialogHeader>
+                                            <DialogTitle>カワイイアバターを作成</DialogTitle>
+                                        </DialogHeader>
+                                        <KawaiiGenerator 
+                                            onSave={handleAvatarSave}
+                                            isSaving={avatarSaving}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="name">氏名</Label>
