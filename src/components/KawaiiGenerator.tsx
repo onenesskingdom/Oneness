@@ -1,571 +1,454 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Download, Shuffle, RefreshCcw } from 'lucide-react';
+import React, { useCallback, useRef, useState } from 'react';
 
-interface KawaiiAvatar {
-  skinColor: string;
-  eyeColor: string;
-  hairColor: string;
-  hairStyle: string;
-  expression: string;
-  clothing: string;
-  accessory: string;
-}
+// SVG Icon for the loading spinner
+const LoadingSpinner: React.FC = () => (
+  <svg
+    className="animate-spin -ml-1 mr-3 h-10 w-10 text-pink-500"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    ></circle>
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    ></path>
+  </svg>
+);
 
-interface KawaiiGeneratorProps {
-  onAvatarGenerated?: (avatarData: KawaiiAvatar, imageUrl: string) => void;
-  onSave?: (avatarData: { avatar: KawaiiAvatar; imageUrl: string }) => void;
-  isSaving?: boolean;
-}
+// SVG Icon for image placeholders
+const ImagePlaceholderIcon: React.FC = () => (
+  <svg
+    className="h-24 w-24 text-gray-400"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l-1.586-1.586a2 2 0 00-2.828 0L6 14m6-6l.01.01M3 3h18v18H3V3z"
+    />
+  </svg>
+);
 
-const skinColors = ['#FDBCB4', '#F1C27D', '#E0AC69', '#C68642', '#8D5524'];
-const eyeColors = ['#4A90E2', '#50E3C2', '#B8E986', '#F5A623', '#D0021B', '#9013FE'];
-const hairColors = ['#2D3748', '#4A5568', '#718096', '#A0AEC0', '#E2E8F0', '#FED7D7'];
-const hairStyles = ['short', 'long', 'curly', 'ponytail', 'bun'];
-const expressions = ['happy', 'excited', 'calm', 'curious', 'sleepy'];
-const clothing = ['casual', 'formal', 'sporty', 'elegant', 'cute'];
-const accessories = ['none', 'glasses', 'hat', 'bow', 'earrings'];
+// SVG Icon for Download button
+const DownloadIcon: React.FC = () => (
+  <svg
+    className="h-6 w-6 mr-2"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+    />
+  </svg>
+);
 
-const KawaiiGenerator: React.FC<KawaiiGeneratorProps> = ({ onAvatarGenerated, onSave, isSaving = false }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export default function KawaiiGenerator() {
+  const [inputImage, setInputImage] = useState<string | null>(null); // Stores the user's image as data URL
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null); // Stores the AI's image as data URL
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [webcamActive, setWebcamActive] = useState(false);
+  const [gender, setGender] = useState<'female' | 'male'>('female'); // Added gender state, default to 'female'
 
-  const [avatar, setAvatar] = useState<KawaiiAvatar>({
-    skinColor: skinColors[0],
-    eyeColor: eyeColors[0],
-    hairColor: hairColors[0],
-    hairStyle: hairStyles[0],
-    expression: expressions[0],
-    clothing: clothing[0],
-    accessory: accessories[0]
-  });
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null); // Hidden canvas for capturing frame
 
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  /**
+   * Utility to fetch with exponential backoff.
+   */
+  const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, delay = 1000): Promise<any> => {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        if ((response.status >= 500 || response.status === 429) && retries > 0) {
+          console.warn(`Retrying... attempts left: ${retries}`);
+          await new Promise(res => setTimeout(res, delay));
+          return fetchWithRetry(url, options, retries - 1, delay * 2);
+        }
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      return response.json();
+    } catch (err) {
+      if (retries > 0) {
+        console.warn(`Retrying... attempts left: ${retries}`);
+        await new Promise(res => setTimeout(res, delay));
+        return fetchWithRetry(url, options, retries - 1, delay * 2);
+      }
+      console.error('Fetch failed after multiple retries:', err);
+      throw err;
+    }
+  };
 
-  const randomizeAvatar = useCallback(() => {
-    const newAvatar: KawaiiAvatar = {
-      skinColor: skinColors[Math.floor(Math.random() * skinColors.length)],
-      eyeColor: eyeColors[Math.floor(Math.random() * eyeColors.length)],
-      hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
-      hairStyle: hairStyles[Math.floor(Math.random() * hairStyles.length)],
-      expression: expressions[Math.floor(Math.random() * expressions.length)],
-      clothing: clothing[Math.floor(Math.random() * clothing.length)],
-      accessory: accessories[Math.floor(Math.random() * accessories.length)]
-    };
-    setAvatar(newAvatar);
-    generateAvatar(newAvatar);
+  /**
+   * Starts the user's webcam.
+   */
+  const startWebcam = async () => {
+    stopWebcam();
+    setWebcamActive(true);
+    setInputImage(null);
+    setGeneratedImage(null);
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Error accessing webcam:', err);
+      setError('Could not access webcam. Please check permissions.');
+      setWebcamActive(false);
+    }
+  };
+
+  /**
+   * Stops the webcam stream.
+   */
+  const stopWebcam = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setWebcamActive(false);
   }, []);
 
-  const generateAvatar = useCallback((avatarData: KawaiiAvatar) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Set background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw avatar
-    drawKawaiiAvatar(ctx, avatarData, canvas.width, canvas.height);
-
-    // Convert to image URL
-    const imageUrl = canvas.toDataURL('image/png');
-    setGeneratedImageUrl(imageUrl);
-  }, [avatar]);
-
-  const drawKawaiiAvatar = (ctx: CanvasRenderingContext2D, avatar: KawaiiAvatar, width: number, height: number) => {
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // Draw head (circle)
-    ctx.beginPath();
-    ctx.arc(centerX, centerY - 20, 80, 0, 2 * Math.PI);
-    ctx.fillStyle = avatar.skinColor;
-    ctx.fill();
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Draw hair based on style
-    drawHair(ctx, avatar, centerX, centerY);
-
-    // Draw eyes
-    drawEyes(ctx, avatar, centerX, centerY);
-
-    // Draw mouth based on expression
-    drawMouth(ctx, avatar, centerX, centerY);
-
-    // Draw clothing
-    drawClothing(ctx, avatar, centerX, centerY);
-
-    // Draw accessory
-    if (avatar.accessory !== 'none') {
-      drawAccessory(ctx, avatar, centerX, centerY);
+  /**
+   * Captures a frame from the webcam feed.
+   */
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        setError('Unable to capture image.');
+        return;
+      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/png');
+      setInputImage(dataUrl);
+      stopWebcam();
     }
   };
 
-  const drawHair = (ctx: CanvasRenderingContext2D, avatar: KawaiiAvatar, centerX: number, centerY: number) => {
-    ctx.fillStyle = avatar.hairColor;
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
+  /**
+   * Handles file upload from the user's device.
+   */
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    stopWebcam();
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setInputImage(reader.result as string);
+        setGeneratedImage(null);
+        setError(null);
+      };
+      reader.onerror = () => {
+        setError('Failed to read image file.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-    switch (avatar.hairStyle) {
-      case 'short':
-        // Short hair
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 70, 30, 0, Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        break;
-      case 'long':
-        // Long hair
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 60, 40, 0, Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        // Add strands
-        for (let i = -20; i <= 20; i += 10) {
-          ctx.beginPath();
-          ctx.moveTo(centerX + i, centerY - 20);
-          ctx.lineTo(centerX + i + Math.random() * 5 - 2.5, centerY + 40);
-          ctx.stroke();
+  /**
+   * Generic function to call the Gemini API.
+   * Can be used for both image-to-image and text-to-image.
+   */
+  const callGeminiAPI = async (prompt: string, base64Data: string | null = null, mimeType: string | null = null) => {
+    setIsLoading(true);
+    setGeneratedImage(null);
+    setError(null);
+
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? '';
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured.');
+      }
+
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+
+      const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [{ text: prompt }];
+
+      // If image data is provided, add it to the parts
+      if (base64Data && mimeType) {
+        parts.push({
+          inlineData: {
+            mimeType,
+            data: base64Data,
+          },
+        });
+      }
+
+      const payload = {
+        contents: [{ parts }],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE'],
+        },
+      };
+
+      const result = await fetchWithRetry(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const imagePart = result?.candidates?.[0]?.content?.parts?.find((p: { inlineData?: { data: string } }) => p.inlineData);
+
+      if (imagePart && imagePart.inlineData?.data) {
+        const generatedBase64 = imagePart.inlineData.data;
+        setGeneratedImage(`data:image/png;base64,${generatedBase64}`);
+      } else {
+        const textPart = result?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text);
+        if (textPart?.text) {
+          setError(`Image generation failed: ${textPart.text}`);
+        } else {
+          setError('Image generation failed. No image data received.');
+          console.error('Invalid API response:', result);
         }
-        break;
-      case 'curly':
-        // Curly hair
-        for (let i = 0; i < 8; i++) {
-          const angle = (i / 8) * Math.PI;
-          const x = centerX + Math.cos(angle) * 35;
-          const y = centerY - 50 + Math.sin(angle) * 35;
-          ctx.beginPath();
-          ctx.arc(x, y, 8, 0, 2 * Math.PI);
-          ctx.fill();
-        }
-        break;
-      case 'ponytail':
-        // Ponytail
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 70, 25, 0, Math.PI);
-        ctx.fill();
-        // Ponytail strand
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY - 45);
-        ctx.lineTo(centerX, centerY + 50);
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = avatar.hairColor;
-        ctx.stroke();
-        break;
-      case 'bun':
-        // Bun
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 70, 25, 0, Math.PI);
-        ctx.fill();
-        // Bun
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 80, 15, 0, 2 * Math.PI);
-        ctx.fill();
-        break;
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred during image generation.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const drawEyes = (ctx: CanvasRenderingContext2D, avatar: KawaiiAvatar, centerX: number, centerY: number) => {
-    const eyeY = centerY - 10;
-    const eyeDistance = 25;
-
-    // Left eye
-    ctx.beginPath();
-    ctx.ellipse(centerX - eyeDistance, eyeY, 12, 15, 0, 0, 2 * Math.PI);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.strokeStyle = '#333';
-    ctx.stroke();
-
-    // Right eye
-    ctx.beginPath();
-    ctx.ellipse(centerX + eyeDistance, eyeY, 12, 15, 0, 0, 2 * Math.PI);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.stroke();
-
-    // Pupils
-    ctx.beginPath();
-    ctx.arc(centerX - eyeDistance, eyeY, 6, 0, 2 * Math.PI);
-    ctx.fillStyle = avatar.eyeColor;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(centerX + eyeDistance, eyeY, 6, 0, 2 * Math.PI);
-    ctx.fillStyle = avatar.eyeColor;
-    ctx.fill();
-
-    // Sparkles in eyes
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(centerX - eyeDistance - 2, eyeY - 2, 1.5, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(centerX + eyeDistance + 2, eyeY - 2, 1.5, 0, 2 * Math.PI);
-    ctx.fill();
-  };
-
-  const drawMouth = (ctx: CanvasRenderingContext2D, avatar: KawaiiAvatar, centerX: number, centerY: number) => {
-    const mouthY = centerY + 20;
-
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 2;
-
-    switch (avatar.expression) {
-      case 'happy':
-        ctx.beginPath();
-        ctx.arc(centerX, mouthY, 8, 0, Math.PI);
-        ctx.stroke();
-        break;
-      case 'excited':
-        ctx.beginPath();
-        ctx.arc(centerX, mouthY - 5, 12, 0, Math.PI);
-        ctx.stroke();
-        // Add exclamation
-        ctx.fillStyle = '#FF6B6B';
-        ctx.beginPath();
-        ctx.arc(centerX + 30, mouthY - 20, 3, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillRect(centerX + 29, mouthY - 10, 2, 8);
-        break;
-      case 'calm':
-        ctx.beginPath();
-        ctx.moveTo(centerX - 6, mouthY);
-        ctx.lineTo(centerX + 6, mouthY);
-        ctx.stroke();
-        break;
-      case 'curious':
-        ctx.beginPath();
-        ctx.arc(centerX, mouthY, 4, 0, Math.PI, true);
-        ctx.stroke();
-        break;
-      case 'sleepy':
-        ctx.beginPath();
-        ctx.ellipse(centerX, mouthY + 2, 6, 2, 0, 0, Math.PI);
-        ctx.stroke();
-        // Zzz
-        ctx.fillStyle = '#87CEEB';
-        ctx.font = '12px Arial';
-        ctx.fillText('z', centerX + 35, mouthY - 10);
-        ctx.fillText('z', centerX + 45, mouthY - 15);
-        ctx.fillText('z', centerX + 55, mouthY - 20);
-        break;
+  /**
+   * Generates a caricature based on the user's input image.
+   */
+  const generateFromImage = () => {
+    if (!inputImage) {
+      setError('Please upload or capture an image first.');
+      return;
     }
-  };
-
-  const drawClothing = (ctx: CanvasRenderingContext2D, avatar: KawaiiAvatar, centerX: number, centerY: number) => {
-    const clothingY = centerY + 60;
-
-    switch (avatar.clothing) {
-      case 'casual':
-        // T-shirt
-        ctx.fillStyle = '#FF6B9D';
-        ctx.fillRect(centerX - 40, clothingY, 80, 60);
-        ctx.strokeStyle = '#333';
-        ctx.strokeRect(centerX - 40, clothingY, 80, 60);
-        break;
-      case 'formal':
-        // Suit
-        ctx.fillStyle = '#4A90E2';
-        ctx.fillRect(centerX - 35, clothingY, 70, 50);
-        ctx.strokeStyle = '#333';
-        ctx.strokeRect(centerX - 35, clothingY, 70, 50);
-        // Tie
-        ctx.fillStyle = '#D0021B';
-        ctx.fillRect(centerX - 3, clothingY + 10, 6, 20);
-        break;
-      case 'sporty':
-        // Sports jersey
-        ctx.fillStyle = '#50E3C2';
-        ctx.fillRect(centerX - 38, clothingY, 76, 55);
-        ctx.strokeStyle = '#333';
-        ctx.strokeRect(centerX - 38, clothingY, 76, 55);
-        // Number
-        ctx.fillStyle = 'white';
-        ctx.font = '16px Arial';
-        ctx.fillText('7', centerX - 5, clothingY + 30);
-        break;
-      case 'elegant':
-        // Dress
-        ctx.fillStyle = '#B8E986';
-        ctx.beginPath();
-        ctx.moveTo(centerX, clothingY);
-        ctx.lineTo(centerX - 30, clothingY + 40);
-        ctx.lineTo(centerX + 30, clothingY + 40);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        break;
-      case 'cute':
-        // Cute dress with polka dots
-        ctx.fillStyle = '#F5A623';
-        ctx.fillRect(centerX - 35, clothingY, 70, 50);
-        ctx.strokeStyle = '#333';
-        ctx.strokeRect(centerX - 35, clothingY, 70, 50);
-        // Polka dots
-        ctx.fillStyle = '#333';
-        for (let i = 0; i < 6; i++) {
-          const x = centerX - 25 + (i % 3) * 15;
-          const y = clothingY + 10 + Math.floor(i / 3) * 15;
-          ctx.beginPath();
-          ctx.arc(x, y, 2, 0, 2 * Math.PI);
-          ctx.fill();
-        }
-        break;
+    const [prefix, base64Data] = inputImage.split(',');
+    const mimeTypeMatch = prefix.match(/:(.*?);/);
+    if (!mimeTypeMatch) {
+      setError('Invalid image format.');
+      return;
     }
+    const mimeType = mimeTypeMatch[1];
+
+    const prompt = `Generate a full-length kawaii anime caricature of this person. The person identifies as ${gender}. It must have a large 'chibi' style head, and a very small body and legs. The character should be standing. Match the person's features, hair, and expression in this new anime style.`;
+
+    callGeminiAPI(prompt, base64Data, mimeType);
   };
 
-  const drawAccessory = (ctx: CanvasRenderingContext2D, avatar: KawaiiAvatar, centerX: number, centerY: number) => {
-    switch (avatar.accessory) {
-      case 'glasses':
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 3;
-        // Left lens
-        ctx.beginPath();
-        ctx.ellipse(centerX - 25, centerY - 10, 15, 12, 0, 0, 2 * Math.PI);
-        ctx.stroke();
-        // Right lens
-        ctx.beginPath();
-        ctx.ellipse(centerX + 25, centerY - 10, 15, 12, 0, 0, 2 * Math.PI);
-        ctx.stroke();
-        // Bridge
-        ctx.beginPath();
-        ctx.moveTo(centerX - 10, centerY - 10);
-        ctx.lineTo(centerX + 10, centerY - 10);
-        ctx.stroke();
-        break;
-      case 'hat':
-        ctx.fillStyle = '#D0021B';
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 85, 35, Math.PI, 2 * Math.PI);
-        ctx.fill();
-        ctx.strokeStyle = '#333';
-        ctx.stroke();
-        break;
-      case 'bow':
-        ctx.fillStyle = '#FF6B9D';
-        ctx.beginPath();
-        ctx.moveTo(centerX - 15, centerY - 70);
-        ctx.lineTo(centerX - 5, centerY - 80);
-        ctx.lineTo(centerX + 5, centerY - 70);
-        ctx.lineTo(centerX + 15, centerY - 80);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#333';
-        ctx.stroke();
-        break;
-      case 'earrings':
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath();
-        ctx.arc(centerX - 45, centerY - 5, 4, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(centerX + 45, centerY - 5, 4, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        break;
-    }
+  /**
+   * Generates a random caricature (skip button).
+   */
+  const generateRandom = () => {
+    stopWebcam();
+    setInputImage(null); // Clear the input image
+
+    const prompt = `Generate a full-length kawaii anime caricature of a random ${gender} person. It must have a large 'chibi' style head, and a very small body and legs. The character should be standing.`;
+
+    callGeminiAPI(prompt);
   };
 
-  const downloadAvatar = useCallback(() => {
-    if (generatedImageUrl) {
+  /**
+   * Downloads the generated image.
+   */
+  const downloadImage = () => {
+    if (generatedImage) {
       const link = document.createElement('a');
-      link.href = generatedImageUrl;
-      link.download = 'kawaii-avatar.png';
+      link.href = generatedImage;
+      link.download = 'kawaii-caricature.png';
       link.click();
     }
-  }, [generatedImageUrl]);
-
-  const saveAvatar = useCallback(() => {
-    if (generatedImageUrl && onSave) {
-      onSave({
-        avatar,
-        imageUrl: generatedImageUrl
-      });
-    }
-  }, [avatar, generatedImageUrl, onSave]);
-
-  React.useEffect(() => {
-    generateAvatar(avatar);
-  }, [avatar, generateAvatar]);
+  };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-center text-2xl font-kawaii">
-          ✨ Create Your Kawaii Avatar ✨
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Avatar Preview */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className="border-4 border-pink-200 rounded-lg p-4 bg-gradient-to-br from-pink-50 to-purple-50">
-              <canvas
-                ref={canvasRef}
-                width={300}
-                height={300}
-                className="border border-gray-300 rounded-lg shadow-lg"
-              />
+    <div className="flex w-full justify-center py-12 font-sans bg-pink-50 min-h-screen">
+      <div className="w-full max-w-2xl p-6 md:p-10 bg-white rounded-2xl shadow-xl">
+        <h1 className="text-3xl md:text-4xl font-bold text-center text-pink-600 mb-6">
+          Kawaii Character Generator
+        </h1>
+        <p className="text-center text-gray-600 mb-8">
+          Upload a picture, use your webcam, or just generate a random
+          character!
+        </p>
+
+        {/* --- Input Selection --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <label className="flex items-center justify-center w-full px-6 py-4 bg-pink-500 text-white rounded-xl shadow-md cursor-pointer hover:bg-pink-600 transition-all font-semibold">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+              disabled={isLoading}
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            Upload Photo
+          </label>
+
+          <button
+            onClick={startWebcam}
+            disabled={isLoading}
+            className="flex items-center justify-center w-full px-6 py-4 bg-blue-500 text-white rounded-xl shadow-md hover:bg-blue-600 transition-all font-semibold disabled:bg-gray-300"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Use Webcam
+          </button>
+        </div>
+
+        {/* --- Webcam View --- */}
+        {webcamActive && (
+          <div className="mb-6 rounded-xl overflow-hidden shadow-lg">
+            <video ref={videoRef} autoPlay playsInline className="w-full h-auto" />
+            <div className="flex justify-center p-4 bg-gray-100">
+              <button
+                onClick={captureImage}
+                className="px-6 py-3 bg-green-500 text-white rounded-xl shadow-md hover:bg-green-600 transition-all font-semibold mr-4"
+              >
+                Capture Photo
+              </button>
+              <button
+                onClick={stopWebcam}
+                className="px-6 py-3 bg-red-500 text-white rounded-xl shadow-md hover:bg-red-600 transition-all font-semibold"
+              >
+                Cancel
+              </button>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={randomizeAvatar} variant="outline" size="sm">
-                <Shuffle className="w-4 h-4 mr-2" />
-                Randomize
-              </Button>
-              {onSave && generatedImageUrl && (
-                <Button onClick={saveAvatar} disabled={isSaving} variant="default" size="sm">
-                  {isSaving ? '保存中...' : '保存する'}
-                </Button>
-              )}
-              {generatedImageUrl && (
-                <Button onClick={downloadAvatar} variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
+          </div>
+        )}
+
+        {/* --- Image Previews --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+          {/* Input Image */}
+          <div className="flex flex-col items-center">
+            <h2 className="font-semibold text-lg text-gray-700 mb-2">Your Picture</h2>
+            <div className="w-full h-64 flex items-center justify-center bg-gray-100 rounded-xl shadow-inner overflow-hidden">
+              {inputImage ? (
+                <img
+                  src={inputImage}
+                  alt="Your input"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ImagePlaceholderIcon />
               )}
             </div>
           </div>
 
-          {/* Customization Controls */}
-          <div className="space-y-4">
-            {/* Skin Color */}
-            <div>
-              <Label className="text-sm font-medium">Skin Color</Label>
-              <div className="flex gap-2 mt-2">
-                {skinColors.map((color) => (
-                  <button
-                    key={color}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      avatar.skinColor === color ? 'border-pink-500' : 'border-gray-300'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setAvatar(prev => ({ ...prev, skinColor: color }))}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Eye Color */}
-            <div>
-              <Label className="text-sm font-medium">Eye Color</Label>
-              <div className="flex gap-2 mt-2">
-                {eyeColors.map((color) => (
-                  <button
-                    key={color}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      avatar.eyeColor === color ? 'border-pink-500' : 'border-gray-300'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setAvatar(prev => ({ ...prev, eyeColor: color }))}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Hair Color */}
-            <div>
-              <Label className="text-sm font-medium">Hair Color</Label>
-              <div className="flex gap-2 mt-2">
-                {hairColors.map((color) => (
-                  <button
-                    key={color}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      avatar.hairColor === color ? 'border-pink-500' : 'border-gray-300'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setAvatar(prev => ({ ...prev, hairColor: color }))}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Hair Style */}
-            <div>
-              <Label className="text-sm font-medium">Hair Style</Label>
-              <Select value={avatar.hairStyle} onValueChange={(value) => setAvatar(prev => ({ ...prev, hairStyle: value }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {hairStyles.map((style) => (
-                    <SelectItem key={style} value={style}>
-                      {style.charAt(0).toUpperCase() + style.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Expression */}
-            <div>
-              <Label className="text-sm font-medium">Expression</Label>
-              <Select value={avatar.expression} onValueChange={(value) => setAvatar(prev => ({ ...prev, expression: value }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {expressions.map((expression) => (
-                    <SelectItem key={expression} value={expression}>
-                      {expression.charAt(0).toUpperCase() + expression.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Clothing */}
-            <div>
-              <Label className="text-sm font-medium">Clothing</Label>
-              <Select value={avatar.clothing} onValueChange={(value) => setAvatar(prev => ({ ...prev, clothing: value }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {clothing.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item.charAt(0).toUpperCase() + item.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Accessory */}
-            <div>
-              <Label className="text-sm font-medium">Accessory</Label>
-              <Select value={avatar.accessory} onValueChange={(value) => setAvatar(prev => ({ ...prev, accessory: value }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {accessories.map((accessory) => (
-                    <SelectItem key={accessory} value={accessory}>
-                      {accessory.charAt(0).toUpperCase() + accessory.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Generated Image */}
+          <div className="flex flex-col items-center">
+            <h2 className="font-semibold text-lg text-gray-700 mb-2">Your Kawaii-chara</h2>
+            <div className="w-full h-64 flex items-center justify-center bg-gray-100 rounded-xl shadow-inner overflow-hidden">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : generatedImage ? (
+                <img
+                  src={generatedImage}
+                  alt="Generated caricature"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <ImagePlaceholderIcon />
+              )}
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
-  );
-};
 
-export default KawaiiGenerator;
+        {/* --- Download Button --- */}
+        {generatedImage && !isLoading && (
+          <div className="flex justify-center mb-6">
+            <a
+              href={generatedImage}
+              download="kawaii-caricature.png"
+              className="flex items-center justify-center w-full md:w-auto px-6 py-3 bg-green-500 text-white rounded-xl shadow-md hover:bg-green-600 transition-all font-semibold"
+            >
+              <DownloadIcon />
+              Download Image
+            </a>
+          </div>
+        )}
+
+        {/* --- Gender Selection --- */}
+        <div className="mb-6">
+          <label className="block text-center text-lg font-semibold text-gray-700 mb-3">
+            Character Preference
+          </label>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={() => setGender('female')}
+              disabled={isLoading}
+              className={`w-1/2 md:w-1/3 py-3 rounded-xl font-bold transition-all ${
+                gender === 'female'
+                  ? 'bg-pink-500 text-white shadow-lg'
+                  : 'bg-white text-pink-500 border-2 border-pink-400'
+              }`}
+            >
+              Female
+            </button>
+            <button
+              onClick={() => setGender('male')}
+              disabled={isLoading}
+              className={`w-1/2 md:w-1/3 py-3 rounded-xl font-bold transition-all ${
+                gender === 'male'
+                  ? 'bg-blue-500 text-white shadow-lg'
+                  : 'bg-white text-blue-500 border-2 border-blue-400'
+              }`}
+            >
+              Male
+            </button>
+          </div>
+        </div>
+
+        {/* --- Action Buttons --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={generateFromImage}
+            disabled={!inputImage || isLoading}
+            className="w-full py-4 bg-purple-600 text-white text-lg font-bold rounded-xl shadow-lg hover:bg-purple-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Generate from Photo
+          </button>
+          <button
+            onClick={generateRandom}
+            disabled={isLoading}
+            className="w-full py-4 bg-gray-600 text-white text-lg font-bold rounded-xl shadow-lg hover:bg-gray-700 transition-all disabled:bg-gray-300"
+          >
+            Generate Random
+          </button>
+        </div>
+
+        {/* --- Error Message --- */}
+        {error && (
+          <div className="mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
+            <strong>Oops!</strong> {error}
+          </div>
+        )}
+
+        {/* Hidden canvas for webcam capture */}
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
+      </div>
+    </div>
+  );
+}

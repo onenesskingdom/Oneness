@@ -16,6 +16,9 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 # Site URL for redirects
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
+# Gemini AI Configuration (for Kawaii avatar generation)
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+
 # OAuth Configuration (for Google and Apple login)
 # Configure these in your Supabase dashboard under Authentication → Providers
 
@@ -53,6 +56,12 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 3. Enable Apple provider and enter Team ID, Services ID, Private Key, and Key ID
 4. Set redirect URLs to match your site URL
 
-## Production deployment
+## Gemini AI Setup
 
-For production (VPS deployment), create `.env.production` with the same variables using your production Supabase project credentials.
+### Getting a Gemini API Key
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Create a new API key or use an existing one
+4. Copy the API key and add it to your `.env.local` file as `NEXT_PUBLIC_GEMINI_API_KEY`
+
+The Kawaii avatar generator uses Google's Gemini AI to create personalized anime-style caricatures from user photos or generate random characters.
