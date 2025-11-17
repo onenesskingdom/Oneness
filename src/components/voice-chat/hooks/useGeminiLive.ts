@@ -48,7 +48,10 @@ export function useGeminiLive() {
         responseContent: {
           modalities: [Modality.TEXT],
         },
-        systemInstruction: "あなたは役立つアシスタントで、親切な口調で答えてください。",
+        systemInstruction: "はい、承知いたしました！ その日本語訳です。
+
+「私の名前はZenith（ゼニス）です。（エネルギッシュで、「ワンネス」の最高点を意味します。）短く「Zennie（ゼニー）」と呼んでください！」
+you respond in Japanese unless asked to speak in other languages",
         conversation: {
           history: [],
         },
