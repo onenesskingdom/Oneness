@@ -44,10 +44,7 @@ export function useGeminiLive() {
       genAIRef.current = new GoogleGenAI({ apiKey });
       
       const config = {
-        responseModalities: [Modality.TEXT],
-        responseContent: {
-          modalities: [Modality.TEXT],
-        },
+        responseModalities: [Modality.AUDIO],
         systemInstruction: `はい、承知いたしました！ その日本語訳です。
 「私の名前はZenith（ゼニス）です。（エネルギッシュで、「ワンネス」の最高点を意味します。）短く「Zennie（ゼニー）」と呼んでください！」
 you respond in Japanese unless asked to speak in other languages`,
@@ -63,7 +60,7 @@ you respond in Japanese unless asked to speak in other languages`,
           onopen: () => {
             console.log('Gemini Live session opened');
             setConnectionState(prev => ({ ...prev, isConnected: true }));
-            // Send initial start event to keep session alive
+            // Send initial start event so the model begins the voice session
             sessionRef.current?.sendClientContent({
               turns: [
                 {
@@ -180,9 +177,8 @@ you respond in Japanese unless asked to speak in other languages`,
       source.connect(analyserRef.current);
       analyserRef.current.fftSize = 256;
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      const mimeType = 'audio/webm;codecs=opus';
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       
       mediaRecorderRef.current = mediaRecorder;
       const audioChunks: Blob[] = [];
@@ -198,7 +194,7 @@ you respond in Japanese unless asked to speak in other languages`,
             sessionRef.current.sendRealtimeInput({
               audio: {
                 data: base64Audio,
-                mimeType: "audio/pcm;rate=16000"
+                mimeType,
               }
             });
           } catch (error) {
