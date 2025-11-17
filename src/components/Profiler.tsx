@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Heart, Users, Lightbulb, Target, Sparkles } from 'lucide-react';
+import { LoadingSpinner } from '@/lib/icons';
 
 interface UserProfile {
   displayName: string;
@@ -28,31 +28,32 @@ interface UserProfile {
 
 interface ProfilerProps {
   onProfileComplete: (profile: UserProfile) => void;
+  isSubmitting?: boolean;
 }
 
 const interestOptions = [
-  'Meditation', 'Yoga', 'Nature', 'Music', 'Art', 'Cooking', 'Sports',
-  'Reading', 'Writing', 'Photography', 'Travel', 'Volunteering', 'Gardening',
-  'Dancing', 'Singing', 'Technology', 'Science', 'History', 'Philosophy'
+  '瞑想', 'ヨガ', '自然', '音楽', 'アート', '料理', 'スポーツ',
+  '読書', '執筆', '写真', '旅行', 'ボランティア', 'ガーデニング',
+  'ダンス', '歌', 'テクノロジー', '科学', '歴史', '哲学'
 ];
 
 const personalityOptions = [
-  'Creative', 'Analytical', 'Empathetic', 'Adventurous', 'Calm', 'Energetic',
-  'Introverted', 'Extroverted', 'Optimistic', 'Thoughtful', 'Spontaneous', 'Organized'
+  '創造的', '分析的', '共感的', '冒険好き', '穏やか', 'エネルギッシュ',
+  '内向的', '外向的', '楽観的', '思慮深い', '自発的', '計画的'
 ];
 
 const valueOptions = [
-  'Peace', 'Love', 'Harmony', 'Compassion', 'Honesty', 'Kindness', 'Respect',
-  'Unity', 'Growth', 'Wisdom', 'Freedom', 'Justice', 'Equality', 'Sustainability'
+  '平和', '愛', '調和', '思いやり', '誠実', '優しさ', '尊重',
+  '団結', '成長', '知恵', '自由', '正義', '平等', '持続可能性'
 ];
 
 const goalOptions = [
-  'Personal Growth', 'Help Others', 'Build Community', 'Learn New Skills',
-  'Travel the World', 'Create Art', 'Start a Business', 'Volunteer Regularly',
-  'Achieve Inner Peace', 'Build Meaningful Relationships', 'Live Sustainably'
+  '自己成長', '他者への貢献', 'コミュニティづくり', '新しいスキルの習得',
+  '世界を旅する', 'アートを創る', '起業する', '定期的なボランティア',
+  '心の平和を得る', '意味のある人間関係を築く', '持続可能な暮らし'
 ];
 
-const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
+const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete, isSubmitting = false }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '',
@@ -69,11 +70,11 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
   });
 
   const steps = [
-    { title: 'Basic Info', icon: Users },
-    { title: 'Personality', icon: Heart },
-    { title: 'Interests & Values', icon: Lightbulb },
-    { title: 'Goals & Dreams', icon: Target },
-    { title: 'Complete Profile', icon: Sparkles }
+    { title: '基本情報', icon: Users },
+    { title: '性格', icon: Heart },
+    { title: '興味・価値観', icon: Lightbulb },
+    { title: '目標・夢', icon: Target },
+    { title: 'プロフィール確認', icon: Sparkles }
   ];
 
   const updateProfile = (field: keyof UserProfile, value: any) => {
@@ -112,58 +113,58 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
           <div className="space-y-6">
             <div>
               <Label htmlFor="displayName" className="text-lg font-medium">
-                What's your display name? *
+                表示名を教えてください *
               </Label>
               <Input
                 id="displayName"
                 value={profile.displayName}
                 onChange={(e) => updateProfile('displayName', e.target.value)}
-                placeholder="e.g., HarmonySeeker42"
+                placeholder="例: ハーモニーシーカー42"
                 className="mt-2"
               />
             </div>
 
             <div>
               <Label htmlFor="bio" className="text-lg font-medium">
-                Tell us about yourself
+                自己紹介をお願いします
               </Label>
               <Textarea
                 id="bio"
                 value={profile.bio}
                 onChange={(e) => updateProfile('bio', e.target.value)}
-                placeholder="Share your journey, passions, or what brings you to Oneness Kingdom..."
+                placeholder="これまでの歩みや情熱、ワンネスキングダムに来た理由などをお聞かせください..."
                 className="mt-2 min-h-[100px]"
               />
             </div>
 
             <div>
               <Label htmlFor="occupation" className="text-lg font-medium">
-                What do you do?
+                現在のお仕事や活動は？
               </Label>
               <Input
                 id="occupation"
                 value={profile.occupation}
                 onChange={(e) => updateProfile('occupation', e.target.value)}
-                placeholder="e.g., Student, Artist, Teacher, Entrepreneur..."
+                placeholder="例: 学生、アーティスト、教師、起業家など"
                 className="mt-2"
               />
             </div>
 
             <div>
               <Label htmlFor="location" className="text-lg font-medium">
-                Where are you from?
+                どちらにお住まいですか？
               </Label>
               <Input
                 id="location"
                 value={profile.location}
                 onChange={(e) => updateProfile('location', e.target.value)}
-                placeholder="e.g., Tokyo, Japan or Global Citizen"
+                placeholder="例: 東京都、地球市民 など"
                 className="mt-2"
               />
             </div>
 
             <div>
-              <Label className="text-lg font-medium">Relationship Status</Label>
+              <Label className="text-lg font-medium">現在の交際状況</Label>
               <RadioGroup
                 value={profile.relationshipStatus}
                 onValueChange={(value) => updateProfile('relationshipStatus', value)}
@@ -171,19 +172,19 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="single" id="single" />
-                  <Label htmlFor="single">Single</Label>
+                  <Label htmlFor="single">独身</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="in_relationship" id="in_relationship" />
-                  <Label htmlFor="in_relationship">In a Relationship</Label>
+                  <Label htmlFor="in_relationship">交際中</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="married" id="married" />
-                  <Label htmlFor="married">Married</Label>
+                  <Label htmlFor="married">既婚</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="prefer_not_say" id="prefer_not_say" />
-                  <Label htmlFor="prefer_not_say">Prefer not to say</Label>
+                  <Label htmlFor="prefer_not_say">回答しない</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -194,9 +195,9 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium mb-4">Which words describe your personality?</h3>
+              <h3 className="text-lg font-medium mb-4">あなたの性格を表す言葉を選んでください</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Select 3-5 traits that resonate with you
+                あなたに当てはまる特徴を3〜5個選択してください
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {personalityOptions.map((trait) => (
@@ -215,7 +216,7 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
             </div>
 
             <div className="mt-6 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg">
-              <h4 className="font-medium text-pink-800 mb-2">Selected Traits:</h4>
+              <h4 className="font-medium text-pink-800 mb-2">選択した性格:</h4>
               <div className="flex flex-wrap gap-2">
                 {profile.personality.map((trait) => (
                   <Badge key={trait} variant="secondary" className="bg-pink-100 text-pink-800">
@@ -231,9 +232,9 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium mb-4">What are your interests?</h3>
+              <h3 className="text-lg font-medium mb-4">興味のあることを教えてください</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Choose activities and hobbies that bring you joy
+                好きな活動や趣味を選択してください
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {interestOptions.map((interest) => (
@@ -252,9 +253,9 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
             </div>
 
             <div>
-              <h3 className="text-lg font-medium mb-4">What values are important to you?</h3>
+              <h3 className="text-lg font-medium mb-4">大切にしている価値観は何ですか？</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Select the principles that guide your life
+                あなたの人生を支える価値観を選んでください
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {valueOptions.map((value) => (
@@ -274,7 +275,7 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
               <div className="p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
-                <h4 className="font-medium text-blue-800 mb-2">Your Interests:</h4>
+                <h4 className="font-medium text-blue-800 mb-2">選択した興味:</h4>
                 <div className="flex flex-wrap gap-1">
                   {profile.interests.map((interest) => (
                     <Badge key={interest} variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
@@ -285,7 +286,7 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
               </div>
 
               <div className="p-4 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
-                <h4 className="font-medium text-green-800 mb-2">Your Values:</h4>
+                <h4 className="font-medium text-green-800 mb-2">選択した価値観:</h4>
                 <div className="flex flex-wrap gap-1">
                   {profile.values.map((value) => (
                     <Badge key={value} variant="secondary" className="bg-green-100 text-green-800 text-xs">
@@ -302,9 +303,9 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium mb-4">What are your goals and dreams?</h3>
+              <h3 className="text-lg font-medium mb-4">目標や夢を教えてください</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Share what you hope to achieve or experience
+                叶えたいこと、経験したいことを選択してください
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {goalOptions.map((goal) => (
@@ -324,32 +325,32 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
 
             <div>
               <Label htmlFor="favoriteQuote" className="text-lg font-medium">
-                What's your favorite quote or mantra?
+                お気に入りの言葉や座右の銘はありますか？
               </Label>
               <Textarea
                 id="favoriteQuote"
                 value={profile.favoriteQuote}
                 onChange={(e) => updateProfile('favoriteQuote', e.target.value)}
-                placeholder="A quote that inspires you..."
+                placeholder="あなたを励ましてくれる言葉を入力してください..."
                 className="mt-2"
               />
             </div>
 
             <div>
               <Label htmlFor="hobbies" className="text-lg font-medium">
-                Any other hobbies or activities? (comma-separated)
+                他に好きな趣味や活動はありますか？（カンマ区切り）
               </Label>
               <Input
                 id="hobbies"
                 value={profile.hobbies.join(', ')}
                 onChange={(e) => updateProfile('hobbies', e.target.value.split(',').map(h => h.trim()).filter(h => h))}
-                placeholder="e.g., painting, hiking, meditation, cooking"
+                placeholder="例: 絵画, ハイキング, 瞑想, 料理"
                 className="mt-2"
               />
             </div>
 
             <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-              <h4 className="font-medium text-purple-800 mb-2">Your Goals:</h4>
+              <h4 className="font-medium text-purple-800 mb-2">選択した目標:</h4>
               <div className="flex flex-wrap gap-2">
                 {profile.goals.map((goal) => (
                   <Badge key={goal} variant="secondary" className="bg-purple-100 text-purple-800">
@@ -365,32 +366,32 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-green-600 mb-4">🎉 Your Profile is Complete!</h3>
+              <h3 className="text-2xl font-bold text-green-600 mb-4">🎉 プロフィールが完成しました！</h3>
               <p className="text-muted-foreground">
-                Review your information below and click "Complete Setup" to join Oneness Kingdom.
+                内容を確認し、「登録を完了する」ボタンを押してワンネスキングダムに参加しましょう。
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Basic Information</CardTitle>
+                  <CardTitle className="text-lg">基本情報</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p><strong>Name:</strong> {profile.displayName}</p>
-                  <p><strong>Occupation:</strong> {profile.occupation}</p>
-                  <p><strong>Location:</strong> {profile.location}</p>
-                  <p><strong>Status:</strong> {profile.relationshipStatus}</p>
+                  <p><strong>名前:</strong> {profile.displayName}</p>
+                  <p><strong>職業・活動:</strong> {profile.occupation}</p>
+                  <p><strong>所在地:</strong> {profile.location}</p>
+                  <p><strong>交際状況:</strong> {profile.relationshipStatus}</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Personality & Interests</CardTitle>
+                  <CardTitle className="text-lg">性格と興味</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div>
-                    <strong>Personality:</strong>
+                    <strong>性格:</strong>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {profile.personality.map((trait) => (
                         <Badge key={trait} variant="outline" className="text-xs">
@@ -400,14 +401,14 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
                     </div>
                   </div>
                   <div>
-                    <strong>Interests:</strong>
+                    <strong>興味:</strong>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {profile.interests.slice(0, 3).map((interest) => (
                         <Badge key={interest} variant="outline" className="text-xs">
                           {interest}
                         </Badge>
                       ))}
-                      {profile.interests.length > 3 && <span className="text-xs text-muted-foreground">+{profile.interests.length - 3} more</span>}
+                      {profile.interests.length > 3 && <span className="text-xs text-muted-foreground">+{profile.interests.length - 3} 件</span>}
                     </div>
                   </div>
                 </CardContent>
@@ -417,7 +418,7 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
             {profile.bio && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">About You</CardTitle>
+                  <CardTitle className="text-lg">あなたについて</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm">{profile.bio}</p>
@@ -428,7 +429,7 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
             {profile.favoriteQuote && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Favorite Quote</CardTitle>
+                  <CardTitle className="text-lg">大切にしている言葉</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <blockquote className="text-sm italic text-center">
@@ -450,10 +451,10 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-2xl font-kawaii">
-            🌟 Create Your Profile 🌟
+            🌟 プロフィールを作成しましょう 🌟
           </CardTitle>
           <div className="text-sm text-muted-foreground">
-            Step {currentStep + 1} of {steps.length}
+            ステップ {currentStep + 1} / {steps.length}
           </div>
         </div>
 
@@ -497,23 +498,30 @@ const Profiler: React.FC<ProfilerProps> = ({ onProfileComplete }) => {
             disabled={currentStep === 0}
             variant="outline"
           >
-            Previous
+            戻る
           </Button>
 
           {currentStep === steps.length - 1 ? (
             <Button
               onClick={completeProfile}
-              disabled={!profile.displayName.trim()}
+              disabled={!profile.displayName.trim() || isSubmitting}
               className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
             >
-              Complete Setup ✨
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <LoadingSpinner />
+                  <span>少々お待ちください...</span>
+                </span>
+              ) : (
+                '登録を完了する ✨'
+              )}
             </Button>
           ) : (
             <Button
               onClick={nextStep}
-              disabled={currentStep === 0 && !profile.displayName.trim()}
+              disabled={(currentStep === 0 && !profile.displayName.trim()) || isSubmitting}
             >
-              Next
+              次へ
             </Button>
           )}
         </div>

@@ -66,15 +66,15 @@ export default function RegisterForm() {
       } else {
         toast({
           variant: "destructive",
-          title: "OAuth Error",
-          description: data.error || `Failed to authenticate with ${provider}`,
+          title: "OAuthエラー",
+          description: data.error || `${provider === 'google' ? 'Google' : 'Apple'}での認証に失敗しました。`,
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: `An error occurred during ${provider} authentication.`,
+        title: "エラー",
+        description: `${provider === 'google' ? 'Google' : 'Apple'}認証中に予期せぬエラーが発生しました。`,
       });
     } finally {
       setIsLoading(false);
@@ -259,18 +259,6 @@ export default function RegisterForm() {
       <div className="space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-headline font-semibold mb-2">アバターを作成しましょう</h2>
-          <p className="text-muted-foreground">あなたらしい可愛いアバターを作ってください</p>
-        </div>
-
-        <KawaiiGenerator onAvatarGenerated={handleAvatarGenerated} />
-
-        <div className="flex justify-center">
-          <Button
-            onClick={() => setCurrentStep(0)}
-            className="bg-red-500 hover:bg-red-600 text-white"
-          >
-            戻る
-          </Button>
         </div>
       </div>
     );
@@ -285,7 +273,7 @@ export default function RegisterForm() {
           <p className="text-muted-foreground">あなたの興味や価値観を教えてください</p>
         </div>
 
-        <Profiler onProfileComplete={handleProfileComplete} />
+        <Profiler onProfileComplete={handleProfileComplete} isSubmitting={isLoading} />
 
         <div className="flex justify-center">
           <Button onClick={() => setCurrentStep(1)} variant="outline" disabled={isLoading}>
