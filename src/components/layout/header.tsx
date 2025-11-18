@@ -13,6 +13,7 @@ import { logoutAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { logout } from '@/lib/auth';
+import { LanguageSelector } from '@/components/layout/LanguageSelector';
 
 export default function Header() {
   const pathname = usePathname();
@@ -101,6 +102,7 @@ export default function Header() {
           </div>
 
           <nav className="flex items-center gap-3">
+            <LanguageSelector />
             <Button variant="ghost" size="icon" asChild>
               <Link href="/dashboard/wallet">
                 <Wallet className="h-6 w-6" />
@@ -171,6 +173,7 @@ export default function Header() {
           <span>ワンネスキングダム</span>
         </Link>
         <nav className="flex items-center gap-4">
+          <LanguageSelector />
           <Button variant="ghost" asChild className={cn(isTransparent && "hover:bg-white/10")}>
             <Link href="/exchange">両替</Link>
           </Button>
